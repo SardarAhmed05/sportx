@@ -44,6 +44,7 @@ export default function VideoPlayer({
   const [useProxy, setUseProxy] = useState(false);
   const [streamError, setStreamError] = useState(null);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [autoFailoverMessage, setAutoFailoverMessage] = useState('');
   const [failedServerIndices, setFailedServerIndices] = useState(new Set());
   const [serverHealthMap, setServerHealthMap] = useState({});
@@ -75,6 +76,7 @@ export default function VideoPlayer({
     setUseProxy(false);
     setStreamError(null);
     setIsBuffering(false);
+    setIsIframeLoading(true);
     setAutoFailoverMessage('');
     setFailedServerIndices(new Set());
     setDynamicReplayStreams([]);
@@ -191,6 +193,35 @@ export default function VideoPlayer({
     ? (useProxy && !isEmbedStream ? getProxiedStreamUrl(currentStream.url) : currentStream.url)
     : '';
 
+  // Format auto-play parameters for diverse embed providers (YouTube, Dailymotion, embed.st)
+  const formatAutoPlayUrl = (rawUrl) => {
+    if (!rawUrl) return '';
+    try {
+      const parsed = new URL(rawUrl, window.location.origin);
+      if (rawUrl.includes('youtube') || rawUrl.includes('youtu.be')) {
+        parsed.searchParams.set('autoplay', '1');
+        parsed.searchParams.set('enablejsapi', '1');
+        parsed.searchParams.set('playsinline', '1');
+        parsed.searchParams.set('rel', '0');
+        return parsed.toString();
+      }
+      if (rawUrl.includes('dailymotion')) {
+        parsed.searchParams.set('autoplay', '1');
+        parsed.searchParams.set('mute', '0');
+        return parsed.toString();
+      }
+      parsed.searchParams.set('autoplay', '1');
+      return parsed.toString();
+    } catch (e) {
+      const sep = rawUrl.includes('?') ? '&' : '?';
+      return `${rawUrl}${sep}autoplay=1`;
+    }
+  };
+
+  useEffect(() => {
+    setIsIframeLoading(true);
+  }, [activeStreamUrl]);
+
   // Background health probing for non-embed streams
   useEffect(() => {
     if (!streams.length) return;
@@ -306,9 +337,12 @@ export default function VideoPlayer({
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 30,
-        maxBufferLength: 15,
+        backBufferLength: 60,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
         liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 8,
         xhrSetup: (xhr) => {
           xhr.withCredentials = false;
         }
@@ -319,7 +353,17 @@ export default function VideoPlayer({
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsBuffering(false);
-        video.play().catch(() => setIsPlaying(false));
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch(() => {
+              // Mute to pass browser autoplay policy and play immediately
+              video.muted = true;
+              setIsMuted(true);
+              video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            });
+        }
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -349,7 +393,16 @@ export default function VideoPlayer({
       video.src = activeStreamUrl;
       video.addEventListener('loadedmetadata', () => {
         setIsBuffering(false);
-        video.play().catch(() => setIsPlaying(false));
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch(() => {
+              video.muted = true;
+              setIsMuted(true);
+              video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            });
+        }
       });
       video.onerror = () => {
         setIsBuffering(false);
@@ -405,7 +458,7 @@ export default function VideoPlayer({
   const matchDateLabel = matchData?.date || matchData?.kickoff_date;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl overflow-hidden p-4 sm:p-5 space-y-4 transition-colors">
+    <div className="max-w-6xl mx-auto w-full bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl overflow-hidden p-3 sm:p-4 space-y-3 transition-colors">
       {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-3">
@@ -556,11 +609,24 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Video Cinema Container */}
+      {/* Video Cinema Container - Responsively sized for all screens (laptops, phones, tablets) */}
       <div 
         ref={containerRef}
-        className="relative aspect-video w-full rounded-2xl bg-black overflow-hidden shadow-2xl flex items-center justify-center group"
+        className="relative w-full aspect-video max-h-[50vh] sm:max-h-[56vh] lg:max-h-[62vh] rounded-xl sm:rounded-2xl bg-slate-950 overflow-hidden shadow-2xl flex items-center justify-center group mx-auto"
       >
+        {/* Ambient Subtle Glow Backdrop (Keeps screen from ever going pitch black) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+          {matchData?.home_team?.logo ? (
+            <img 
+              src={matchData.home_team.logo} 
+              alt=""
+              className="w-full h-full object-cover blur-3xl opacity-15 scale-125" 
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-tr from-emerald-950/20 via-slate-900 to-slate-950" />
+          )}
+        </div>
+
         {/* Floating Auto-Failover Notification Banner */}
         {autoFailoverMessage && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-[90%] bg-slate-900/95 border border-emerald-500/50 backdrop-blur-md text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold">
@@ -569,17 +635,29 @@ export default function VideoPlayer({
           </div>
         )}
 
+        {/* Modern Translucent Buffering / Connecting Indicator (YouTube Style - Screen never blacks out) */}
+        {(isBuffering || (isEmbedStream && isIframeLoading)) && !streamError && (
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs flex flex-col items-center justify-center z-10 transition-opacity duration-300 pointer-events-none select-none">
+            <div className="relative flex items-center justify-center">
+              <div className="w-11 h-11 rounded-full border-3 border-emerald-500/20 border-t-emerald-400 animate-spin shadow-lg"></div>
+              <div className="absolute w-5 h-5 rounded-full bg-emerald-500/20 animate-ping"></div>
+            </div>
+            <p className="text-[11px] font-bold text-slate-200 mt-2.5 tracking-wide drop-shadow-md">
+              {isEmbedStream ? 'Connecting to Broadcast Feed...' : 'Buffering Stream...'}
+            </p>
+          </div>
+        )}
+
         {isEmbedStream ? (
           <iframe
             key={activeStreamUrl}
-            src={activeStreamUrl.includes('youtube') && !activeStreamUrl.includes('enablejsapi=1')
-              ? `${activeStreamUrl}${activeStreamUrl.includes('?') ? '&' : '?'}enablejsapi=1`
-              : activeStreamUrl}
+            src={formatAutoPlayUrl(activeStreamUrl)}
             title={matchTitle}
-            className="w-full h-full border-0"
+            className="w-full h-full border-0 relative z-1"
             referrerPolicy="no-referrer"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+            allow="accelerometer; autoplay *; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen *"
             allowFullScreen
+            onLoad={() => setIsIframeLoading(false)}
             onError={() => {
               console.warn('Iframe failed to load, triggering auto-failover');
               triggerAutoFailover(selectedServerIndex);
@@ -589,21 +667,17 @@ export default function VideoPlayer({
           <>
             <video
               ref={videoRef}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain relative z-1"
               playsInline
               autoPlay
               muted={isMuted}
+              onWaiting={() => setIsBuffering(true)}
+              onPlaying={() => setIsBuffering(false)}
+              onCanPlay={() => setIsBuffering(false)}
             />
 
-            {/* Buffering Indicator */}
-            {isBuffering && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full border-4 border-slate-700 border-t-emerald-500 animate-spin"></div>
-              </div>
-            )}
-
             {/* Video Controls Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <button onClick={togglePlay} className="text-white hover:text-emerald-400 p-1 cursor-pointer">
                   {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}

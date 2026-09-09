@@ -135,7 +135,9 @@ class UniversalSportsEngine:
             return []
 
         now = time.time()
-        if s_key in self.sport_caches and (now - self.last_fetch.get(s_key, 0)) < self.cache_ttl:
+        has_live = any(m.get("status") == "LIVE" for m in self.sport_caches.get(s_key, []))
+        effective_ttl = 25.0 if has_live else self.cache_ttl
+        if s_key in self.sport_caches and (now - self.last_fetch.get(s_key, 0)) < effective_ttl:
             return self.sport_caches[s_key]
 
         cfg = SPORTS_CONFIGS[s_key]

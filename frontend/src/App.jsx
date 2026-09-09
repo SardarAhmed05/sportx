@@ -197,10 +197,12 @@ export default function App() {
     return favorites.some(f => f.data?.id === item.data?.id);
   };
 
-  // Load data for the requested sport from backend API
-  const loadData = async (sportToLoad = activeSport, isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
-    else if (!footballMatches.length) setLoading(true);
+  // Load data for the requested sport from backend API (with optional silent background refresh)
+  const loadData = async (sportToLoad = activeSport, isRefresh = false, isSilent = false) => {
+    if (!isSilent) {
+      if (isRefresh) setIsRefreshing(true);
+      else if (!footballMatches.length) setLoading(true);
+    }
     setError(null);
 
     try {
@@ -244,8 +246,10 @@ export default function App() {
         setError('Unable to load sports streams from backend. Please ensure the backend server is running.');
       }
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      if (!isSilent) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -281,6 +285,24 @@ export default function App() {
   useEffect(() => {
     loadData(activeSport);
   }, []);
+
+  // Auto-Sync Live Clocks & Scores: silently refresh in background every 25 seconds
+  useEffect(() => {
+    const liveInterval = setInterval(() => {
+      if (!document.hidden) {
+        loadData(activeSport, false, true);
+      }
+    }, 25000);
+
+    return () => clearInterval(liveInterval);
+  }, [activeSport]);
+
+  const handleGoHome = () => {
+    setActiveSection('matches');
+    setActiveStream(null);
+    setSearchQuery('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleRefreshScraper = async () => {
     try {
@@ -353,6 +375,7 @@ export default function App() {
         favoritesCount={favorites.length}
         onCustomStreamOpen={() => setIsCustomStreamModalOpen(true)}
         onOpenFavorites={() => setActiveSection('favorites')}
+        onGoHome={handleGoHome}
       />
 
       {/* Main Content Area */}

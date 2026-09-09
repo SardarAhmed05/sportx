@@ -64,7 +64,8 @@ export default function Navbar({
   liveCount = 0,
   favoritesCount = 0,
   onCustomStreamOpen,
-  onOpenFavorites
+  onOpenFavorites,
+  onGoHome
 }) {
   const [isSportOpen, setIsSportOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -111,8 +112,13 @@ export default function Navbar({
         {/* LEFT SECTION: Minimal Classic Brand Logo + Desktop Cluster  */}
         {/* ============================================================ */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 z-10">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-2 sm:gap-2.5 select-none cursor-pointer group">
+          {/* Brand Logo (Clickable -> Returns to Home Page) */}
+          <button 
+            onClick={onGoHome}
+            className="flex items-center gap-2 sm:gap-2.5 select-none cursor-pointer group text-left bg-transparent border-0 p-0 focus:outline-hidden"
+            title="Return to SportX Home"
+            aria-label="Return to SportX Home"
+          >
             <div className="group-hover:scale-105 transition-transform duration-200 drop-shadow-md">
               <SportXLogo className="w-8 h-8 sm:w-9 sm:h-9" />
             </div>
@@ -124,7 +130,7 @@ export default function Navbar({
                 Sports Hub
               </span>
             </div>
-          </div>
+          </button>
 
           <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block" />
 

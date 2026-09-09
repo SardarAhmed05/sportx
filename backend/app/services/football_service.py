@@ -481,7 +481,9 @@ class FootballEngine:
     async def fetch_all_real_matches(self) -> List[Dict[str, Any]]:
         """Queries ESPN scoreboards with full date ranges for accurate live, upcoming, and finished fixtures."""
         now = time.time()
-        if self.cached_matches and (now - self.last_fetch_timestamp) < self.cache_ttl_seconds:
+        has_live = any(m.get("status") == "LIVE" for m in self.cached_matches)
+        effective_ttl = 25.0 if has_live else self.cache_ttl_seconds
+        if self.cached_matches and (now - self.last_fetch_timestamp) < effective_ttl:
             return self.cached_matches
 
         matches = []
@@ -529,8 +531,18 @@ class FootballEngine:
                             
                             if status_state == "in":
                                 match_status = "LIVE"
-                                display_clock = status_obj.get("displayClock", "LIVE")
-                                minute = f"{display_clock}'" if "'" not in str(display_clock) else str(display_clock)
+                                display_clock = status_obj.get("displayClock") or status_type.get("detail") or "LIVE"
+                                clock_str = str(display_clock).strip()
+                                if ":" in clock_str:
+                                    minute = f"{clock_str.split(':')[0]}'"
+                                elif clock_str.isdigit():
+                                    minute = f"{clock_str}'"
+                                elif "'" in clock_str:
+                                    minute = clock_str
+                                elif clock_str.upper() in ["HT", "HALFTIME"]:
+                                    minute = "HT"
+                                else:
+                                    minute = f"{clock_str}'" if clock_str != "LIVE" else "LIVE"
                                 match_time = f"{minute} Live"
                             elif status_state == "post":
                                 match_status = "FINISHED"

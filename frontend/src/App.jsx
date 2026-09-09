@@ -199,45 +199,65 @@ export default function App() {
 
   // Load data for the requested sport from backend API (with optional silent background refresh)
   const loadData = async (sportToLoad = activeSport, isRefresh = false, isSilent = false) => {
+    const targetSport = (typeof sportToLoad === 'string' && sportToLoad.trim()) ? sportToLoad.trim() : activeSport;
     if (!isSilent) {
-      if (isRefresh) setIsRefreshing(true);
-      else if (!footballMatches.length) setLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (!footballMatches.length) {
+        setLoading(true);
+      }
     }
     setError(null);
 
     try {
       const [overviewData, channelsData, catData, replaysData] = await Promise.all([
-        fetchOverview(sportToLoad),
-        fetchChannels(sportToLoad),
+        fetchOverview(targetSport),
+        fetchChannels(targetSport),
         fetchCategories(),
-        fetchFootballReplays(null, null, null, sportToLoad).catch(() => ({ replays: [], categories: [] }))
+        fetchFootballReplays(null, null, null, targetSport).catch(() => ({ replays: [], categories: [] }))
       ]);
 
-      setOverview(overviewData);
-      const matchesList = overviewData.matches?.matches || overviewData.football?.matches || [];
-      const chList = channelsData.channels || [];
-      const repList = replaysData?.replays || [];
-      const repCats = replaysData?.categories || [];
+      if (overviewData) {
+        setOverview(overviewData);
+        const matchesList = overviewData.matches?.matches || overviewData.football?.matches || [];
+        if (Array.isArray(matchesList) && matchesList.length > 0) {
+          setFootballMatches(matchesList);
+        }
+      }
 
-      setFootballMatches(matchesList);
-      setReplays(repList);
-      setReplaysCategories(repCats);
-      setChannels(chList);
-      setCategories(catData.categories || []);
-      setCountries(catData.countries || []);
+      const chList = channelsData?.channels;
+      if (Array.isArray(chList) && chList.length > 0) {
+        setChannels(chList);
+      }
+
+      const repList = replaysData?.replays;
+      if (Array.isArray(repList) && repList.length > 0) {
+        setReplays(repList);
+      }
+
+      if (replaysData?.categories) {
+        setReplaysCategories(replaysData.categories);
+      }
+      if (catData?.categories) {
+        setCategories(catData.categories);
+      }
+      if (catData?.countries) {
+        setCountries(catData.countries);
+      }
 
       // Cache locally so switching sports has 0.0s instant hydration
       try {
-        localStorage.setItem(`sportx_cached_overview_${sportToLoad}`, JSON.stringify(overviewData));
-        localStorage.setItem(`sportx_cached_matches_${sportToLoad}`, JSON.stringify(matchesList));
-        localStorage.setItem(`sportx_cached_replays_${sportToLoad}`, JSON.stringify(repList));
-        localStorage.setItem(`sportx_cached_channels_${sportToLoad}`, JSON.stringify(chList));
+        if (overviewData) localStorage.setItem(`sportx_cached_overview_${targetSport}`, JSON.stringify(overviewData));
+        const matchesList = overviewData?.matches?.matches || overviewData?.football?.matches || [];
+        if (matchesList.length) localStorage.setItem(`sportx_cached_matches_${targetSport}`, JSON.stringify(matchesList));
+        if (repList?.length) localStorage.setItem(`sportx_cached_replays_${targetSport}`, JSON.stringify(repList));
+        if (chList?.length) localStorage.setItem(`sportx_cached_channels_${targetSport}`, JSON.stringify(chList));
 
-        if (sportToLoad === 'football') {
-          localStorage.setItem('sportx_cached_overview', JSON.stringify(overviewData));
-          localStorage.setItem('sportx_cached_matches', JSON.stringify(matchesList));
-          localStorage.setItem('sportx_cached_replays', JSON.stringify(repList));
-          localStorage.setItem('sportx_cached_channels', JSON.stringify(chList));
+        if (targetSport === 'football') {
+          if (overviewData) localStorage.setItem('sportx_cached_overview', JSON.stringify(overviewData));
+          if (matchesList.length) localStorage.setItem('sportx_cached_matches', JSON.stringify(matchesList));
+          if (repList?.length) localStorage.setItem('sportx_cached_replays', JSON.stringify(repList));
+          if (chList?.length) localStorage.setItem('sportx_cached_channels', JSON.stringify(chList));
         }
       } catch (e) {}
     } catch (err) {
@@ -307,10 +327,13 @@ export default function App() {
   const handleRefreshScraper = async () => {
     try {
       setIsRefreshing(true);
-      await triggerScraper();
-      await loadData(true);
+      // Run background scraper non-blocking so it never hangs UI
+      triggerScraper().catch(err => console.warn('Background scraper notice:', err));
+      // Refresh current active sport feeds and live scores
+      await loadData(activeSport, true, false);
     } catch (err) {
-      console.error(err);
+      console.error('Refresh feeds error:', err);
+    } finally {
       setIsRefreshing(false);
     }
   };

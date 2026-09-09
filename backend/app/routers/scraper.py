@@ -13,8 +13,12 @@ router = APIRouter(prefix="/api/scraper", tags=["Stream Scraper"])
 @router.post("/trigger")
 async def trigger_scrape(background_tasks: BackgroundTasks):
     """Triggers real-time scraping of global sports stream feeds in background."""
-    res = await scraper_service.trigger_live_scrape()
-    return res
+    background_tasks.add_task(scraper_service.trigger_live_scrape)
+    return {
+        "status": "scraping_started",
+        "message": "Background live stream scrape initiated",
+        "cached_count": len(scraper_service.cached_scraped_channels)
+    }
 
 @router.get("/status")
 async def scraper_status():

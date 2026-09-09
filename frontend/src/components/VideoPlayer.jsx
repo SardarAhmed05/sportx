@@ -7,6 +7,8 @@ import {
   VolumeX, 
   Maximize, 
   Minimize, 
+  Maximize2,
+  Minimize2,
   RefreshCw, 
   Tv, 
   Star, 
@@ -66,6 +68,24 @@ export default function VideoPlayer({
       localStorage.setItem('sportx_hide_server_helper', 'true');
     } catch (e) {}
     setNeverShowHelper(true);
+  };
+
+  const [isTheater, setIsTheater] = useState(() => {
+    try {
+      return localStorage.getItem('sportx_theater_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleTheater = () => {
+    setIsTheater((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sportx_theater_mode', String(next));
+      } catch (e) {}
+      return next;
+    });
   };
 
   const matchData = streamItem?.data || streamItem;
@@ -548,6 +568,20 @@ export default function VideoPlayer({
             </button>
           )}
 
+          {/* Theater Mode Toggle Button */}
+          <button
+            onClick={toggleTheater}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              isTheater
+                ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+            title={isTheater ? 'Switch to Fit Screen Mode' : 'Switch to Wide Theater Mode'}
+          >
+            {isTheater ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isTheater ? 'Fit Screen' : 'Theater'}</span>
+          </button>
+
           {onClose && (
             <button
               onClick={onClose}
@@ -609,10 +643,13 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Video Cinema Container - Responsively sized for all screens (laptops, phones, tablets) */}
+      {/* Video Cinema Container - Strictly 16:9 Aspect Ratio with Zero Side Pillarboxes */}
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video max-h-[50vh] sm:max-h-[56vh] lg:max-h-[62vh] rounded-xl sm:rounded-2xl bg-slate-950 overflow-hidden shadow-2xl flex items-center justify-center group mx-auto"
+        style={{
+          maxWidth: isTheater ? '100%' : 'min(100%, calc((100vh - 220px) * 16 / 9))'
+        }}
+        className="relative w-full aspect-video rounded-xl sm:rounded-2xl bg-black overflow-hidden shadow-2xl flex items-center justify-center group mx-auto transition-all duration-300"
       >
         {/* Ambient Subtle Glow Backdrop (Keeps screen from ever going pitch black) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">

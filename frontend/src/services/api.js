@@ -47,6 +47,17 @@ export async function fetchReplayStreams(home, away, competition = '') {
   return res.json();
 }
 
+export async function fetchLiveStreams(home, away, sport = 'football') {
+  const params = new URLSearchParams();
+  if (home) params.append('home', home);
+  if (away) params.append('away', away);
+  if (sport) params.append('sport', sport);
+
+  const res = await fetch(`${API_BASE}/matches/live-streams?${params.toString()}`);
+  if (!res.ok) throw new Error('Failed to resolve live match streams');
+  return res.json();
+}
+
 
 export async function fetchChannels(sport = null, country = null, query = null) {
   const params = new URLSearchParams();

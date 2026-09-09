@@ -99,6 +99,22 @@ async def get_match_detail(match_id: str):
         
     raise HTTPException(status_code=404, detail="Match not found")
 
+@router.get("/live-streams")
+async def get_match_live_streams(
+    home: str = Query(..., description="Home team name"),
+    away: str = Query(..., description="Away team name"),
+    sport: Optional[str] = Query("football", description="Sport name")
+):
+    """Dynamically resolves real-time live broadcast stream servers for any match."""
+    from app.services.live_stream_resolver import live_stream_resolver
+    servers = await live_stream_resolver.resolve_match_streams(home, away, sport or "football")
+    return {
+        "home": home,
+        "away": away,
+        "sport": sport,
+        "servers": servers
+    }
+
 @router.get("/replay-streams")
 async def get_match_replay_streams(
     home: str = Query(..., description="Home team name"),

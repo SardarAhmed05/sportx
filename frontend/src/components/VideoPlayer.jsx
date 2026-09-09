@@ -22,7 +22,7 @@ import {
   Zap,
   ExternalLink
 } from 'lucide-react';
-import { getProxiedStreamUrl, checkStreamHealth, fetchReplayStreams } from '../services/api';
+import { getProxiedStreamUrl, checkStreamHealth, fetchReplayStreams, fetchLiveStreams } from '../services/api';
 
 export default function VideoPlayer({ 
   streamItem, 
@@ -48,7 +48,9 @@ export default function VideoPlayer({
   const [failedServerIndices, setFailedServerIndices] = useState(new Set());
   const [serverHealthMap, setServerHealthMap] = useState({});
   const [dynamicReplayStreams, setDynamicReplayStreams] = useState([]);
+  const [dynamicLiveStreams, setDynamicLiveStreams] = useState([]);
   const [isResolvingReplay, setIsResolvingReplay] = useState(false);
+  const [isResolvingLive, setIsResolvingLive] = useState(false);
   const [isHelperDismissed, setIsHelperDismissed] = useState(false);
   const [neverShowHelper, setNeverShowHelper] = useState(() => {
     try {
@@ -76,6 +78,7 @@ export default function VideoPlayer({
     setAutoFailoverMessage('');
     setFailedServerIndices(new Set());
     setDynamicReplayStreams([]);
+    setDynamicLiveStreams([]);
 
     const home = matchData?.home_team?.name;
     const away = matchData?.away_team?.name;
@@ -85,6 +88,13 @@ export default function VideoPlayer({
       matchData?.status === 'FT' || 
       matchData?.is_recent ||
       matchData?.category === 'recent'
+    );
+    const isLiveMatch = isMatch && (
+      matchData?.status === 'LIVE' || 
+      matchData?.status === 'IN_PLAY' || 
+      matchData?.status === '1H' || 
+      matchData?.status === '2H' || 
+      matchData?.status === 'HT'
     );
 
     // If it's a finished match without curated streams, dynamically resolve exact match highlights
@@ -99,7 +109,20 @@ export default function VideoPlayer({
         .catch(err => console.warn('Replay resolution error:', err))
         .finally(() => setIsResolvingReplay(false));
     }
-  }, [matchData?.id, matchData?.home_team?.name, matchData?.away_team?.name]);
+
+    // If it's an active or upcoming match, resolve real-time broadcast servers
+    if (!isFinishedMatch && home && away) {
+      setIsResolvingLive(true);
+      fetchLiveStreams(home, away, matchData?.sport || 'football')
+        .then(res => {
+          if (res?.servers && res.servers.length > 0) {
+            setDynamicLiveStreams(res.servers);
+          }
+        })
+        .catch(err => console.warn('Live stream resolution error:', err))
+        .finally(() => setIsResolvingLive(false));
+    }
+  }, [matchData?.id, matchData?.home_team?.name, matchData?.away_team?.name, matchData?.status]);
 
   const getStreamsList = () => {
     if (!streamItem) return [];
@@ -107,6 +130,11 @@ export default function VideoPlayer({
     if (matchData?.streams?.length >= 2 && (matchData?.is_cult_classic || matchData?.duration || matchData?.year)) {
       return matchData.streams;
     }
+    // Dynamic live streams resolved in real-time
+    if (dynamicLiveStreams.length > 0) {
+      return dynamicLiveStreams;
+    }
+    // Dynamic replay streams resolved in real-time
     if (dynamicReplayStreams.length > 0) {
       return dynamicReplayStreams;
     }
@@ -118,10 +146,10 @@ export default function VideoPlayer({
     }
     const mainStream = {
       id: 'main-srv',
-      label: `Server 1: ${matchData?.name || matchData?.title || 'Football HD'}`,
+      label: `Server 1: ${matchData?.name || matchData?.title || 'Live HD Stream'}`,
       network: matchData?.country || matchData?.competition || 'Global Feed',
       quality: matchData?.quality || '1080p HD',
-      url: matchData?.stream_url || matchData?.url || 'https://epiembeds.online/embed/sky-sports-premier-league',
+      url: matchData?.stream_url || matchData?.url || 'https://embed.st/embed/admin/ppv-barcelona-vs-feyenoord-rotterdam/1',
       is_embed: matchData?.is_embed ?? !(matchData?.stream_url || matchData?.url || '').includes('.m3u8'),
       language: matchData?.language || 'English',
       coverage: 'Official Channel Stream',
@@ -485,10 +513,12 @@ export default function VideoPlayer({
           <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span className="font-semibold">
-              Doesn't work or highlights buffering?
+              {isFinished ? "Doesn't work or highlights buffering?" : "Live stream buffering or blocked by browser?"}
             </span>
             <span className="text-amber-700/90 dark:text-amber-300/80 hidden md:inline">
-              Multiple official servers (YouTube, Dailymotion & TV Vault) available.
+              {isFinished 
+                ? "Multiple official servers (YouTube, Dailymotion & TV Vault) available." 
+                : "Multiple broadcast servers (TNT Sports, Sky Sports, Paramount+) available."}
             </span>
           </div>
 
@@ -547,7 +577,8 @@ export default function VideoPlayer({
               : activeStreamUrl}
             title={matchTitle}
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="no-referrer"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
             onError={() => {
               console.warn('Iframe failed to load, triggering auto-failover');
@@ -613,7 +644,7 @@ export default function VideoPlayer({
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Watch Official Highlights Directly
+                  {isFinished ? 'Watch Official Highlights Directly' : 'Open Popout Player (Direct Stream)'}
                 </a>
               )}
               {streams.length > 1 && (
@@ -656,23 +687,27 @@ export default function VideoPlayer({
             <span>{isFinished ? 'Select Official Highlights & Replay Feed:' : 'Select Live Broadcast Server:'}</span>
           </span>
           <div className="flex items-center gap-3">
-            {currentStream?.watch_url && (
+            {(currentStream?.watch_url || currentStream?.url) && (
               <a
-                href={currentStream.watch_url}
+                href={currentStream.watch_url || currentStream.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline flex items-center gap-1 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-lg transition-colors"
-                title="Watch on official provider"
+                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline flex items-center gap-1 shrink-0 bg-emerald-500/10 px-2.5 py-1 rounded-lg transition-colors"
+                title={isFinished ? 'Watch on official provider' : 'Open live broadcast in popout player'}
               >
                 <ExternalLink className="w-3 h-3" />
-                <span>Open in {currentStream.url?.includes('dailymotion') ? 'Dailymotion' : 'YouTube'}</span>
+                <span>
+                  {isFinished
+                    ? (currentStream.url?.includes('dailymotion') ? 'Open Dailymotion' : 'Open YouTube')
+                    : 'Open Popout Player'}
+                </span>
               </a>
             )}
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:flex items-center gap-1.5">
-              {isResolvingReplay ? (
+              {isResolvingReplay || isResolvingLive ? (
                 <span className="text-emerald-500 animate-pulse text-xs font-bold flex items-center gap-1">
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>Locating match feeds...</span>
+                  <span>Locating broadcast feeds...</span>
                 </span>
               ) : (
                 <span>{streams.length} Feeds Available</span>

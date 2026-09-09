@@ -602,6 +602,24 @@ class FootballEngine:
 
             # Sort live by date
             live.sort(key=lambda m: m.get("raw_date", ""))
+            
+            # Enrich live matches with real-time verified broadcast streams
+            if live:
+                try:
+                    from app.services.live_stream_resolver import live_stream_resolver
+                    async def enrich_live(m):
+                        try:
+                            h_name = m.get("home_team", {}).get("name", "")
+                            a_name = m.get("away_team", {}).get("name", "")
+                            live_srvs = await live_stream_resolver.resolve_match_streams(h_name, a_name, "football")
+                            if live_srvs:
+                                m["streams"] = live_srvs
+                        except Exception:
+                            pass
+                    await asyncio.gather(*[enrich_live(m) for m in live], return_exceptions=True)
+                except Exception as ex:
+                    logger.warning(f"Error enriching live streams: {ex}")
+
             # Sort upcoming soonest first (ascending)
             upcoming.sort(key=lambda m: m.get("raw_date", ""))
             # Sort finished MOST PREVIOUS FIRST (descending: newest finished match first!)

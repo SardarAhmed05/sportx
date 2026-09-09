@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="sxObsidian" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="60%" stop-color="#090D16"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="sxEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="sxBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="sxPlatinum" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="13" fill="url(#sxObsidian)"/>
+  <rect x="0.75" y="0.75" width="46.5" height="46.5" rx="12.25" fill="none" stroke="url(#sxBorder)" stroke-width="1.2"/>
+  <path d="M 33 13 C 33 13, 20 12, 16 18 C 12.5 23.5, 17 27, 24 28 C 31 29, 35.5 32.5, 32 38 C 28 44, 15 43, 15 43" 
+        fill="none" stroke="url(#sxPlatinum)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 15 35 L 33 13" 
+        fill="none" stroke="url(#sxEmerald)" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="24" cy="24" r="1.75" fill="#34D399"/>
+</svg>

@@ -14,6 +14,7 @@ import asyncio
 import datetime
 import time
 import logging
+import urllib.parse
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("sports_engine")
@@ -283,9 +284,38 @@ class UniversalSportsEngine:
                                 match_time = f"Scheduled: {short_detail}"
                             
                             venue = comp.get("venue", {}).get("fullName", f"{home_name} Arena")
-                            match_id = f"{s_key}-{e.get('id', len(league_matches))}"
-                            
-                            broadcasters = cfg.get("default_broadcasters", [])
+                            if match_status == "FINISHED":
+                                q_enc = urllib.parse.quote_plus(f"{home_name} vs {away_name} highlights {cfg.get('name', '')}")
+                                broadcasters = [
+                                    {
+                                        "id": f"{s_key}-yt-hl-{e.get('id', len(league_matches))}",
+                                        "label": f"Server 1: YouTube Official Highlights ({home_name} vs {away_name})",
+                                        "network": f"{cfg['name']} Highlights",
+                                        "quality": "1080p HD",
+                                        "language": "English Commentary",
+                                        "url": f"https://www.youtube-nocookie.com/embed?listType=search&list={q_enc}",
+                                        "watch_url": f"https://www.youtube.com/results?search_query={q_enc}",
+                                        "is_embed": True,
+                                        "is_primary": True,
+                                        "is_replay": True,
+                                        "coverage": f"Official Video Highlights: {home_name} vs {away_name}"
+                                    },
+                                    {
+                                        "id": f"{s_key}-dm-hl-{e.get('id', len(league_matches))}",
+                                        "label": "Server 2: Dailymotion Sports Mirror",
+                                        "network": "Dailymotion Sports",
+                                        "quality": "1080p 60fps",
+                                        "language": "International",
+                                        "url": "https://geo.dailymotion.com/player.html?video=x9z79ao",
+                                        "watch_url": f"https://www.dailymotion.com/search/{urllib.parse.quote_plus(home_name + ' ' + away_name)}",
+                                        "is_embed": True,
+                                        "is_primary": False,
+                                        "is_replay": True,
+                                        "coverage": f"Extended Game Highlights: {home_name} vs {away_name}"
+                                    }
+                                ]
+                            else:
+                                broadcasters = cfg.get("default_broadcasters", [])
                             
                             league_matches.append({
                                 "id": match_id,

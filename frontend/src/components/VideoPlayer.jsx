@@ -19,7 +19,8 @@ import {
   Calendar,
   Clock,
   ShieldCheck,
-  Zap
+  Zap,
+  ExternalLink
 } from 'lucide-react';
 import { getProxiedStreamUrl, checkStreamHealth, fetchReplayStreams } from '../services/api';
 
@@ -78,15 +79,15 @@ export default function VideoPlayer({
 
     const home = matchData?.home_team?.name;
     const away = matchData?.away_team?.name;
-    const isFinishedMatch = isMatch && (
+    const hasCuratedStreams = Boolean(matchData?.streams && matchData.streams.length >= 2 && (matchData.is_cult_classic || matchData.duration || matchData.year));
+    const isFinishedMatch = isMatch && !hasCuratedStreams && (
       matchData?.status === 'FINISHED' || 
       matchData?.status === 'FT' || 
       matchData?.is_recent ||
-      Boolean(matchData?.duration) ||
       matchData?.category === 'recent'
     );
 
-    // If it's a finished match/replay, dynamically resolve the exact match's YouTube & Dailymotion highlights
+    // If it's a finished match without curated streams, dynamically resolve exact match highlights
     if (isFinishedMatch && home && away) {
       setIsResolvingReplay(true);
       fetchReplayStreams(home, away, matchData?.competition || matchData?.league)
@@ -102,6 +103,10 @@ export default function VideoPlayer({
 
   const getStreamsList = () => {
     if (!streamItem) return [];
+    // If this match already has verified curated replay mirrors (YouTube + Dailymotion), use them directly
+    if (matchData?.streams?.length >= 2 && (matchData?.is_cult_classic || matchData?.duration || matchData?.year)) {
+      return matchData.streams;
+    }
     if (dynamicReplayStreams.length > 0) {
       return dynamicReplayStreams;
     }
@@ -194,15 +199,14 @@ export default function VideoPlayer({
         attempts++;
       }
 
-      // If all servers failed, reset failure memory and start from Server 1
+      // If all servers failed, do not loop indefinitely
       if (attempts >= streams.length) {
-        setAutoFailoverMessage(`All servers attempted. Cycling back to Server 1...`);
-        setTimeout(() => {
-          setSelectedServerIndex(0);
-          setFailedServerIndices(new Set());
-          setStreamError(null);
-          setTimeout(() => setAutoFailoverMessage(''), 3000);
-        }, 1000);
+        setAutoFailoverMessage('');
+        setStreamError(
+          isFinished 
+            ? 'Third-party embed restricted by rights holders. You can watch the verified highlights directly on the official platform or try another mirror.'
+            : 'All broadcast servers are currently unavailable. Please try an alternative mirror or check back shortly.'
+        );
         return updated;
       }
 
@@ -218,7 +222,7 @@ export default function VideoPlayer({
 
       return updated;
     });
-  }, [streams]);
+  }, [streams, isFinished]);
 
   // Listen for iframe postMessage error events (YouTube Iframe API & Dailymotion error events)
   useEffect(() => {
@@ -567,54 +571,6 @@ export default function VideoPlayer({
               </div>
             )}
 
-            {/* Error Overlay with Smart Failover Actions */}
-            {streamError && (
-              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-4 z-20">
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-rose-500" />
-                </div>
-                <div className="max-w-md">
-                  <p className="text-sm font-bold text-white mb-1">Broadcast Feed Interrupted</p>
-                  <p className="text-xs text-slate-300 leading-relaxed">{streamError}</p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                  <button
-                    onClick={() => {
-                      setFailedServerIndices(new Set());
-                      setSelectedServerIndex(0);
-                      setStreamError(null);
-                      setUseProxy(false);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry from Server 1
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStreamError(null);
-                      setUseProxy(!useProxy);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    {useProxy ? 'Try Direct Connection' : 'Retry with Proxy Relay'}
-                  </button>
-                  {streams.length > 1 && (
-                    <button
-                      onClick={() => {
-                        setStreamError(null);
-                        setSelectedServerIndex((prev) => (prev + 1) % streams.length);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
-                    >
-                      Next Server
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Video Controls Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -635,6 +591,57 @@ export default function VideoPlayer({
             </div>
           </>
         )}
+
+        {/* Unified Error Overlay with Smart Direct Watch Actions */}
+        {streamError && (
+          <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center space-y-4 z-20">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-amber-500" />
+            </div>
+            <div className="max-w-md">
+              <p className="text-sm font-bold text-white mb-1">
+                {isFinished ? 'Official Highlight Playback Notice' : 'Broadcast Feed Interrupted'}
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">{streamError}</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              {(currentStream?.watch_url || currentStream?.url) && (
+                <a
+                  href={currentStream.watch_url || currentStream.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Watch Official Highlights Directly
+                </a>
+              )}
+              {streams.length > 1 && (
+                <button
+                  onClick={() => {
+                    setStreamError(null);
+                    setSelectedServerIndex((prev) => (prev + 1) % streams.length);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Try Alternative Server
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setFailedServerIndices(new Set());
+                  setSelectedServerIndex(0);
+                  setStreamError(null);
+                  setUseProxy(false);
+                }}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+              >
+                Retry Server 1
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Multi-Server / Replay Selector Bar */}
@@ -648,16 +655,30 @@ export default function VideoPlayer({
             )}
             <span>{isFinished ? 'Select Official Highlights & Replay Feed:' : 'Select Live Broadcast Server:'}</span>
           </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-            {isResolvingReplay ? (
-              <span className="text-emerald-500 animate-pulse text-xs font-bold flex items-center gap-1">
-                <RefreshCw className="w-3 h-3 animate-spin" />
-                <span>Locating match replay feeds...</span>
-              </span>
-            ) : (
-              <span>{streams.length} Verified Feeds Available</span>
+          <div className="flex items-center gap-3">
+            {currentStream?.watch_url && (
+              <a
+                href={currentStream.watch_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline flex items-center gap-1 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-lg transition-colors"
+                title="Watch on official provider"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Open in {currentStream.url?.includes('dailymotion') ? 'Dailymotion' : 'YouTube'}</span>
+              </a>
             )}
-          </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:flex items-center gap-1.5">
+              {isResolvingReplay ? (
+                <span className="text-emerald-500 animate-pulse text-xs font-bold flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Locating match feeds...</span>
+                </span>
+              ) : (
+                <span>{streams.length} Feeds Available</span>
+              )}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

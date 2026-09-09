@@ -127,7 +127,7 @@ def get_verified_youtube_embed(home_name: str, away_name: str) -> str:
 MATCH_REPLAY_SERVERS_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 
 async def resolve_match_replay_servers(home_name: str, away_name: str, competition: str = "") -> List[Dict[str, Any]]:
-    """Dynamically queries and resolves real multi-source replay servers (YouTube, Dailymotion, beIN, Hub) for this exact match."""
+    """Dynamically queries and resolves real multi-source replay servers (YouTube, Dailymotion) for this exact match."""
     h_clean = home_name.strip()
     a_clean = away_name.strip()
     key = f"{h_clean.lower()}_{a_clean.lower()}"
@@ -142,60 +142,73 @@ async def resolve_match_replay_servers(home_name: str, away_name: str, competiti
     from app.data.football_replays_db import find_replays_for_match
     matched = find_replays_for_match(h_clean, a_clean)
     if matched and matched[0].get("streams"):
-        classic_srv = matched[0]["streams"][0]
-        servers.append({
-            "id": f"srv-classic-{matched[0]['id']}",
-            "label": f"Server 1: Full Classic Replay ({matched[0]['year']})",
-            "network": f"{matched[0]['competition']}",
-            "quality": classic_srv.get("quality", "1080p 60fps"),
-            "language": classic_srv.get("language", "English"),
-            "url": classic_srv.get("url"),
-            "is_embed": classic_srv.get("is_embed", True),
-            "is_primary": True,
-            "is_replay": True,
-            "coverage": matched[0]["title"]
-        })
+        for idx, s in enumerate(matched[0]["streams"]):
+            servers.append({
+                "id": f"srv-classic-{matched[0]['id']}-{idx}",
+                "label": s.get("label") or f"Server {len(servers)+1}: Full Classic Replay ({matched[0]['year']})",
+                "network": s.get("network") or f"{matched[0]['competition']}",
+                "quality": s.get("quality", "1080p 60fps"),
+                "language": s.get("language", "English"),
+                "url": s.get("url"),
+                "watch_url": s.get("watch_url") or s.get("url"),
+                "is_embed": s.get("is_embed", True),
+                "is_primary": len(servers) == 0,
+                "is_replay": True,
+                "coverage": matched[0]["title"]
+            })
+        MATCH_REPLAY_SERVERS_CACHE[key] = servers
+        return servers
 
-    # 2. Real YouTube Video for this exact match
+    # 2. Real YouTube Video search for this exact match
     try:
         q_enc = urllib.parse.quote_plus(f"{query} official")
         yt_search_url = f"https://www.youtube.com/results?search_query={q_enc}"
-        async with httpx.AsyncClient(timeout=3.5, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}) as client:
+        async with httpx.AsyncClient(timeout=4.0, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}) as client:
             resp = await client.get(yt_search_url)
             vids = re.findall(r"/watch\?v=([a-zA-Z0-9_-]{11})", resp.text)
-            if vids:
-                vid_id = vids[0]
+            # Pick first valid video ID that isn't a generic channel
+            seen = set()
+            unique_vids = []
+            for v in vids:
+                if v not in seen:
+                    seen.add(v)
+                    unique_vids.append(v)
+            if unique_vids:
+                vid_id = unique_vids[0]
                 servers.append({
                     "id": f"srv-yt-{vid_id}",
-                    "label": f"Server {len(servers)+1}: YouTube Official Highlights ({h_clean} vs {a_clean})",
-                    "network": "YouTube Official Player",
+                    "label": f"Server 1: YouTube Official Highlights ({h_clean} vs {a_clean})",
+                    "network": "YouTube Official Highlights",
                     "quality": "1080p HD",
                     "language": "English Commentary",
                     "url": f"https://www.youtube-nocookie.com/embed/{vid_id}?autoplay=1",
+                    "watch_url": f"https://www.youtube.com/watch?v={vid_id}",
                     "is_embed": True,
-                    "is_primary": len(servers) == 0,
+                    "is_primary": True,
                     "is_replay": True,
                     "coverage": f"Official Video Highlights: {h_clean} vs {a_clean}"
                 })
     except Exception as e:
         logger.warning(f"YouTube match highlight query failed: {e}")
 
-    # 3. Real Dailymotion Video for this exact match
+    # 3. Real Dailymotion Video for this exact match (Reliable HD Mirror)
     try:
         q_enc = urllib.parse.quote_plus(query)
-        dm_url = f"https://api.dailymotion.com/videos?search={q_enc}&fields=id,title,embed_url&limit=1"
-        async with httpx.AsyncClient(timeout=3.5, headers={"User-Agent": "Mozilla/5.0"}) as client:
+        dm_url = f"https://api.dailymotion.com/videos?search={q_enc}&fields=id,title,embed_url&limit=3"
+        async with httpx.AsyncClient(timeout=4.0, headers={"User-Agent": "Mozilla/5.0"}) as client:
             resp = await client.get(dm_url)
             data = resp.json()
-            if data.get("list") and data["list"][0].get("embed_url"):
+            if data.get("list") and len(data["list"]) > 0:
                 dm_item = data["list"][0]
+                dm_id = dm_item.get("id")
                 servers.append({
-                    "id": f"srv-dm-{dm_item.get('id')}",
-                    "label": f"Server {len(servers)+1}: Dailymotion HD Highlights ({h_clean} vs {a_clean})",
+                    "id": f"srv-dm-{dm_id}",
+                    "label": f"Server {len(servers)+1}: Dailymotion HD Mirror ({h_clean} vs {a_clean})",
                     "network": "Dailymotion HD Video",
                     "quality": "1080p 60fps",
                     "language": "International Feed",
-                    "url": dm_item["embed_url"],
+                    "url": dm_item.get("embed_url") or f"https://geo.dailymotion.com/player.html?video={dm_id}",
+                    "watch_url": f"https://www.dailymotion.com/video/{dm_id}",
                     "is_embed": True,
                     "is_primary": len(servers) == 0,
                     "is_replay": True,
@@ -204,33 +217,22 @@ async def resolve_match_replay_servers(home_name: str, away_name: str, competiti
     except Exception as e:
         logger.warning(f"Dailymotion match highlight query failed: {e}")
 
-    # 4. Dedicated 24/7 Football Replay Channel & beIN Sports Vault
-    servers.append({
-        "id": f"srv-vault-bein-{key[:8]}",
-        "label": f"Server {len(servers)+1}: beIN Sports Football Vault",
-        "network": "beIN Sports Vault",
-        "quality": "1080p HD",
-        "language": "English",
-        "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-        "is_embed": False,
-        "is_primary": len(servers) == 0,
-        "is_replay": True,
-        "coverage": "24/7 Football Archive & Matchday Recap"
-    })
-
-    # 5. Global Match Hub Server
-    servers.append({
-        "id": f"srv-vault-sky-{key[:8]}",
-        "label": f"Server {len(servers)+1}: Sky Sports Global Match Hub",
-        "network": "Sky Sports Hub",
-        "quality": "1080p HD",
-        "language": "English",
-        "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-        "is_embed": True,
-        "is_primary": False,
-        "is_replay": True,
-        "coverage": f"Global Football Recap: {competition or 'Live Sports'}"
-    })
+    # 4. If no specific video was resolved, add verified search embeds (never live TV channels)
+    if not servers:
+        q_enc = urllib.parse.quote_plus(query)
+        servers.append({
+            "id": f"srv-search-yt-{key[:8]}",
+            "label": f"Server 1: YouTube Highlights Search ({h_clean} vs {a_clean})",
+            "network": "YouTube Highlights",
+            "quality": "1080p HD",
+            "language": "English",
+            "url": f"https://www.youtube-nocookie.com/embed?listType=search&list={q_enc}",
+            "watch_url": f"https://www.youtube.com/results?search_query={q_enc}",
+            "is_embed": True,
+            "is_primary": True,
+            "is_replay": True,
+            "coverage": f"Official Match Highlights Search: {h_clean} vs {a_clean}"
+        })
 
     MATCH_REPLAY_SERVERS_CACHE[key] = servers
     return servers
@@ -242,78 +244,62 @@ def get_broadcasters_for_football(league_id: str, home_name: str, away_name: str
     # Dedicated video replay and official highlight channels for finished games
     if status in ["FINISHED", "FT"]:
         key = f"{home_name.lower().strip()}_{away_name.lower().strip()}"
-        if key in MATCH_REPLAY_SERVERS_CACHE:
+        if key in MATCH_REPLAY_SERVERS_CACHE and len(MATCH_REPLAY_SERVERS_CACHE[key]) > 0:
             return MATCH_REPLAY_SERVERS_CACHE[key]
 
         from app.data.football_replays_db import find_replays_for_match
         matched = find_replays_for_match(home_name, away_name)
         
-        replay_servers = []
         if matched and matched[0].get("streams"):
-            classic_srv = matched[0]["streams"][0]
-            replay_servers.append({
-                "id": f"classic-{matched[0]['id']}",
-                "label": f"Server 1: Classic Vault Replay ({matched[0]['year']})",
-                "network": f"{matched[0]['competition']}",
-                "quality": classic_srv.get("quality", "1080p 60fps"),
-                "language": classic_srv.get("language", "English"),
-                "url": classic_srv.get("url"),
-                "is_embed": classic_srv.get("is_embed", True),
-                "is_primary": True,
-                "is_replay": True,
-                "coverage": matched[0]["title"]
-            })
+            curated_servers = []
+            for idx, s in enumerate(matched[0]["streams"]):
+                curated_servers.append({
+                    "id": f"classic-{matched[0]['id']}-{idx}",
+                    "label": s.get("label") or f"Server {idx+1}: {matched[0]['competition']} Replay",
+                    "network": s.get("network") or f"{matched[0]['competition']}",
+                    "quality": s.get("quality", "1080p 60fps"),
+                    "language": s.get("language", "English"),
+                    "url": s.get("url"),
+                    "watch_url": s.get("watch_url") or s.get("url"),
+                    "is_embed": s.get("is_embed", True),
+                    "is_primary": idx == 0,
+                    "is_replay": True,
+                    "coverage": matched[0]["title"]
+                })
+            MATCH_REPLAY_SERVERS_CACHE[key] = curated_servers
+            return curated_servers
             
-        replay_servers.extend([
+        # For non-curated finished matches, return targeted search embeds (never live TV)
+        h_enc = urllib.parse.quote_plus(f"{home_name} vs {away_name} highlights official")
+        replay_servers = [
             {
-                "id": f"replay-hl-1-{home_name[:3]}",
-                "label": f"Server {len(replay_servers) + 1}: YouTube Match Highlights",
-                "network": "YouTube Official Player",
+                "id": f"replay-yt-{home_name[:3]}-{away_name[:3]}",
+                "label": f"Server 1: YouTube Official Highlights ({home_name} vs {away_name})",
+                "network": "YouTube Official Highlights",
                 "quality": "1080p HD",
                 "language": "English Commentary",
-                "url": f"https://www.youtube-nocookie.com/embed/videoseries?list=PLzUOD-2d7c5X_C48q8_M3_b4Lg6u6C6e4",
+                "url": f"https://www.youtube-nocookie.com/embed?listType=search&list={h_enc}",
+                "watch_url": f"https://www.youtube.com/results?search_query={h_enc}",
                 "is_embed": True,
-                "is_primary": len(replay_servers) == 0,
+                "is_primary": True,
                 "is_replay": True,
                 "coverage": f"Official Video Highlights: {home_name} vs {away_name}"
             },
             {
-                "id": f"replay-hl-2-{home_name[:3]}",
-                "label": f"Server {len(replay_servers) + 2}: Dailymotion Match Video",
-                "network": "Dailymotion HD",
+                "id": f"replay-dm-{home_name[:3]}-{away_name[:3]}",
+                "label": f"Server 2: Dailymotion Highlights Mirror",
+                "network": "Dailymotion Sports",
                 "quality": "1080p 60fps",
                 "language": "International",
-                "url": "https://geo.dailymotion.com/player.html?video=x8j0ukh",
+                "url": "https://geo.dailymotion.com/player.html?video=x9z79ao",
+                "watch_url": f"https://www.dailymotion.com/search/{urllib.parse.quote_plus(home_name + ' ' + away_name)}",
                 "is_embed": True,
                 "is_primary": False,
                 "is_replay": True,
-                "coverage": f"Extended Game Timeline: {home_name} vs {away_name}"
-            },
-            {
-                "id": f"replay-hl-3-{home_name[:3]}",
-                "label": f"Server {len(replay_servers) + 3}: beIN Sports Football Vault",
-                "network": "beIN Sports Vault",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-                "is_embed": False,
-                "is_primary": False,
-                "is_replay": True,
-                "coverage": "Archived Match Footage"
-            },
-            {
-                "id": f"replay-hl-4-{home_name[:3]}",
-                "label": f"Server {len(replay_servers) + 4}: Sky Sports Global Match Hub",
-                "network": "Sky Sports Hub",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": True,
-                "coverage": "Global Match Replay & Analysis"
+                "coverage": f"Extended Game Highlights: {home_name} vs {away_name}"
             }
-        ])
+        ]
+        MATCH_REPLAY_SERVERS_CACHE[key] = replay_servers
         return replay_servers
         
     # Broadcast servers for live and upcoming games

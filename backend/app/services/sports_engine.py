@@ -136,7 +136,7 @@ class UniversalSportsEngine:
 
         now = time.time()
         has_live = any(m.get("status") == "LIVE" for m in self.sport_caches.get(s_key, []))
-        effective_ttl = 25.0 if has_live else self.cache_ttl
+        effective_ttl = 6.0 if has_live else 35.0
         if s_key in self.sport_caches and (now - self.last_fetch.get(s_key, 0)) < effective_ttl:
             return self.sport_caches[s_key]
 
@@ -349,6 +349,9 @@ class UniversalSportsEngine:
                                 "status": match_status,
                                 "minute": minute,
                                 "match_time": match_time,
+                                "clock_seconds": int(status_obj.get("clock", 0) or 0),
+                                "period": int(status_obj.get("period", 1) or 1),
+                                "live_synced_at": now,
                                 "stadium": venue,
                                 "possession": {"home": 51, "away": 49},
                                 "shots_on_target": {"home": max(home_score, 1), "away": max(away_score, 1)},
@@ -448,6 +451,36 @@ class UniversalSportsEngine:
                 if str(m.get("id")) == str(match_id):
                     return m
         return None
+
+    async def get_live_sync_data(self, sport: str) -> Dict[str, Any]:
+        """Ultra-fast live sync: returns real-time match minutes, clocks, and scores for any sport."""
+        s_key = (sport or "basketball").lower().strip()
+        all_matches = await self.fetch_sport_matches(s_key)
+        live_matches = [
+            {
+                "id": m.get("id"),
+                "home_team": {
+                    "name": m.get("home_team", {}).get("name"),
+                    "score": m.get("home_team", {}).get("score", 0)
+                },
+                "away_team": {
+                    "name": m.get("away_team", {}).get("name"),
+                    "score": m.get("away_team", {}).get("score", 0)
+                },
+                "minute": m.get("minute", "LIVE"),
+                "status": m.get("status", "LIVE"),
+                "clock_seconds": m.get("clock_seconds", 0),
+                "period": m.get("period", 1),
+                "live_synced_at": m.get("live_synced_at", time.time())
+            }
+            for m in all_matches if m.get("status") == "LIVE"
+        ]
+        return {
+            "timestamp": time.time(),
+            "sport": s_key,
+            "live_count": len(live_matches),
+            "matches": live_matches
+        }
 
     async def get_overview(self, sport: str) -> Dict[str, Any]:
         """Returns overview for the specified sport with marquee match and total counts."""

@@ -92,7 +92,7 @@ export default function HeroBanner({ marqueeMatch, onWatchMatch, onOpenStats }) 
                     {marqueeMatch.home_team?.score} : {marqueeMatch.away_team?.score}
                   </div>
                   <span className="text-[11px] font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded-full mt-1 border border-red-800/50">
-                    {marqueeMatch.minute || "68'"}
+                    {marqueeMatch.minute || 'LIVE'}
                   </span>
                 </div>
 

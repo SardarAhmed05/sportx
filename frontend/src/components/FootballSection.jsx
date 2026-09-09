@@ -177,7 +177,7 @@ export default function FootballSection({
                     <span className="font-bold text-slate-900 dark:text-white">{m.kickoff_date || m.short_date}</span>
                     <span className="text-slate-400">&bull;</span>
                     <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{isLive ? `${m.minute} Active` : isUpcoming ? m.kickoff_time : 'Final Score'}</span>
+                    <span>{isLive ? (m.minute ? (m.minute.includes('Live') ? m.minute : `${m.minute} Live`) : 'Live Now') : isUpcoming ? m.kickoff_time : 'Final Score'}</span>
                   </div>
 
                   {/* Match Up: Home vs Away */}

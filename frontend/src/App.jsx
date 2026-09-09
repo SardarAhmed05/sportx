@@ -18,7 +18,8 @@ import {
   fetchFootballReplays,
   fetchChannels, 
   fetchCategories, 
-  triggerScraper 
+  triggerScraper,
+  fetchLiveSync
 } from './services/api';
 
 import { 
@@ -306,16 +307,185 @@ export default function App() {
     loadData(activeSport);
   }, []);
 
-  // Auto-Sync Live Clocks & Scores: silently refresh in background every 25 seconds
+  // 1. Dual-Tier Adaptive Real-Time Polling Engine:
+  // When live matches are active: poll lightweight /live-sync every 6 seconds for instant score & referee clock updates
+  // When no live matches are active: poll full data every 30 seconds
   useEffect(() => {
-    const liveInterval = setInterval(() => {
-      if (!document.hidden) {
-        loadData(activeSport, false, true);
-      }
-    }, 25000);
+    const hasLive = footballMatches.some(m => m.status === 'LIVE');
+    const intervalMs = hasLive ? 6000 : 30000;
 
-    return () => clearInterval(liveInterval);
-  }, [activeSport]);
+    const syncScoreboard = async () => {
+      if (document.hidden) return;
+
+      if (!hasLive) {
+        loadData(activeSport, false, true);
+        return;
+      }
+
+      try {
+        const liveData = await fetchLiveSync(activeSport);
+        if (!liveData || !Array.isArray(liveData.matches)) return;
+
+        const currentLiveCount = footballMatches.filter(m => m.status === 'LIVE').length;
+        if (liveData.live_count !== currentLiveCount) {
+          // A match transitioned from upcoming to live, or finished - do complete silent refresh
+          loadData(activeSport, false, true);
+          return;
+        }
+
+        if (liveData.matches.length === 0) return;
+
+        const nowSec = Date.now() / 1000;
+
+        // In-place atomic update for real-time scores and clocks
+        setFootballMatches(prevMatches => {
+          let changed = false;
+          const updated = prevMatches.map(m => {
+            const liveMatch = liveData.matches.find(lm =>
+              (lm.id && lm.id === m.id) ||
+              (lm.espn_id && lm.espn_id === m.espn_id) ||
+              (lm.home_team?.name && m.home_team?.name && lm.home_team.name.toLowerCase() === m.home_team.name.toLowerCase())
+            );
+
+            if (!liveMatch) return m;
+
+            const homeScore = liveMatch.home_team?.score ?? m.home_team?.score;
+            const awayScore = liveMatch.away_team?.score ?? m.away_team?.score;
+            const minute = liveMatch.minute || m.minute;
+            const status = liveMatch.status || m.status;
+
+            if (
+              m.home_team?.score !== homeScore ||
+              m.away_team?.score !== awayScore ||
+              m.minute !== minute ||
+              m.status !== status
+            ) {
+              changed = true;
+              return {
+                ...m,
+                minute,
+                match_time: minute.includes('Live') ? minute : `${minute} Live`,
+                status,
+                clock_seconds: liveMatch.clock_seconds ?? m.clock_seconds,
+                period: liveMatch.period ?? m.period,
+                live_synced_at: liveMatch.live_synced_at || nowSec,
+                home_team: { ...m.home_team, score: homeScore, display_score: homeScore },
+                away_team: { ...m.away_team, score: awayScore, display_score: awayScore }
+              };
+            }
+            return m;
+          });
+
+          return changed ? updated : prevMatches;
+        });
+
+        // Update activeStream if it is currently showing this live match
+        setActiveStream(prevStream => {
+          if (!prevStream || prevStream.type !== 'match' || !prevStream.data) return prevStream;
+          const liveMatch = liveData.matches.find(lm =>
+            (lm.id && lm.id === prevStream.data.id) ||
+            (lm.espn_id && lm.espn_id === prevStream.data.espn_id) ||
+            (lm.home_team?.name && prevStream.data.home_team?.name && lm.home_team.name.toLowerCase() === prevStream.data.home_team.name.toLowerCase())
+          );
+          if (!liveMatch) return prevStream;
+          const homeScore = liveMatch.home_team?.score ?? prevStream.data.home_team?.score;
+          const awayScore = liveMatch.away_team?.score ?? prevStream.data.away_team?.score;
+          const minute = liveMatch.minute || prevStream.data.minute;
+          return {
+            ...prevStream,
+            data: {
+              ...prevStream.data,
+              minute,
+              match_time: minute.includes('Live') ? minute : `${minute} Live`,
+              status: liveMatch.status || prevStream.data.status,
+              home_team: { ...prevStream.data.home_team, score: homeScore, display_score: homeScore },
+              away_team: { ...prevStream.data.away_team, score: awayScore, display_score: awayScore }
+            }
+          };
+        });
+
+        // Update overview marquee match
+        setOverview(prevOv => {
+          if (!prevOv?.marquee_match) return prevOv;
+          const liveMatch = liveData.matches.find(lm =>
+            (lm.id && lm.id === prevOv.marquee_match.id) ||
+            (lm.espn_id && lm.espn_id === prevOv.marquee_match.espn_id) ||
+            (lm.home_team?.name && prevOv.marquee_match.home_team?.name && lm.home_team.name.toLowerCase() === prevOv.marquee_match.home_team.name.toLowerCase())
+          );
+          if (!liveMatch) return prevOv;
+          const homeScore = liveMatch.home_team?.score ?? prevOv.marquee_match.home_team?.score;
+          const awayScore = liveMatch.away_team?.score ?? prevOv.marquee_match.away_team?.score;
+          const minute = liveMatch.minute || prevOv.marquee_match.minute;
+          return {
+            ...prevOv,
+            marquee_match: {
+              ...prevOv.marquee_match,
+              minute,
+              match_time: minute.includes('Live') ? minute : `${minute} Live`,
+              status: liveMatch.status || prevOv.marquee_match.status,
+              home_team: { ...prevOv.marquee_match.home_team, score: homeScore, display_score: homeScore },
+              away_team: { ...prevOv.marquee_match.away_team, score: awayScore, display_score: awayScore }
+            }
+          };
+        });
+      } catch (e) {
+        // Silent background catch
+      }
+    };
+
+    const intervalId = setInterval(syncScoreboard, intervalMs);
+    return () => clearInterval(intervalId);
+  }, [activeSport, footballMatches]);
+
+  // 2. Client-Side Live Virtual Clock Interpolator:
+  // Interpolates match minutes second-by-second so the clock never appears frozen between referee updates
+  useEffect(() => {
+    const hasLive = footballMatches.some(m => m.status === 'LIVE');
+    if (!hasLive) return;
+
+    const clockTicker = setInterval(() => {
+      const nowSec = Date.now() / 1000;
+      setFootballMatches(prevMatches => {
+        let changed = false;
+        const updated = prevMatches.map(m => {
+          if (m.status !== 'LIVE' || !m.minute) return m;
+
+          // Check if minute is a normal football minute like "60'", "60", "23'"
+          const matchResult = String(m.minute).match(/^(\d+)'?$/);
+          if (!matchResult) return m;
+
+          const parsedMin = parseInt(matchResult[1], 10);
+          if (isNaN(parsedMin) || parsedMin <= 0) return m;
+
+          const syncTime = m.live_synced_at || nowSec;
+          const elapsedSec = Math.max(0, nowSec - syncTime);
+          const addedMinutes = Math.floor(elapsedSec / 60);
+
+          if (addedMinutes <= 0) return m;
+
+          // Cap at end of half (45' for 1st half, 90' for 2nd half) until referee adds stoppage time
+          let targetMin = parsedMin + addedMinutes;
+          if (parsedMin <= 45 && targetMin > 45) targetMin = 45;
+          if (parsedMin > 45 && parsedMin <= 90 && targetMin > 90) targetMin = 90;
+
+          const formattedMin = `${targetMin}'`;
+          if (formattedMin !== m.minute) {
+            changed = true;
+            return {
+              ...m,
+              minute: formattedMin,
+              match_time: `${formattedMin} Live`
+            };
+          }
+          return m;
+        });
+
+        return changed ? updated : prevMatches;
+      });
+    }, 10000);
+
+    return () => clearInterval(clockTicker);
+  }, [footballMatches]);
 
   const handleGoHome = () => {
     setActiveSection('matches');

@@ -102,7 +102,7 @@ export default function HeroPoster({
             {isLive && (
               <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-red-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30">
                 <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping"></span>
-                <span>LIVE &bull; {currentMatch.minute || "64'"}</span>
+                <span>LIVE &bull; {currentMatch.minute || 'LIVE'}</span>
               </span>
             )}
             {isUpcoming && (

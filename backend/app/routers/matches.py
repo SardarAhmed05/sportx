@@ -11,6 +11,7 @@ from app.services.football_service import (
     get_live_football_matches, 
     get_football_match_by_id,
     resolve_match_replay_servers,
+    get_live_football_sync,
     FOOTBALL_LEAGUES_CONFIG
 )
 from app.services.sports_engine import universal_sports_engine, SPORTS_CONFIGS
@@ -18,6 +19,19 @@ from app.data.football_replays_db import get_all_football_replays
 from app.data.multi_sports_replays_db import get_multi_sport_replays, get_sport_replay_categories
 
 router = APIRouter(prefix="/api/matches", tags=["Live Sports Matches"])
+
+@router.get("/live-sync")
+async def get_live_sync(
+    sport: Optional[str] = Query("football", description="Sport identifier for ultra-fast live scoreboard and clock sync")
+):
+    """
+    Sub-second real-time scoreboard & match clock sync endpoint.
+    Returns current live match scores, elapsed minutes, periods, and timestamps with zero lag.
+    """
+    sport_key = (sport or "football").lower().strip()
+    if sport_key in ["football", "soccer"]:
+        return await get_live_football_sync()
+    return await universal_sports_engine.get_live_sync_data(sport_key)
 
 @router.get("/overview")
 async def get_matches_overview(

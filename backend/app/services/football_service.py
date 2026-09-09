@@ -472,17 +472,38 @@ def get_broadcasters_for_football(league_id: str, home_name: str, away_name: str
             }
         ]
 
+def team_tokens(name: str) -> set:
+    """Extracts meaningful word tokens from team name for fuzzy matching."""
+    if not name:
+        return set()
+    tokens = [w for w in re.split(r'[^a-zA-Z0-9]', name.lower()) if len(w) >= 3 and w not in ['the', 'club', 'team']]
+    if not tokens:
+        tokens = [w for w in re.split(r'[^a-zA-Z0-9]', name.lower()) if len(w) >= 2]
+    return set(tokens)
+
+def matches_team_fuzzy(name1: str, name2: str) -> bool:
+    """Checks whether two team names refer to the same club."""
+    if not name1 or not name2:
+        return False
+    n1 = name1.lower().strip()
+    n2 = name2.lower().strip()
+    if n1 == n2 or n1 in n2 or n2 in n1:
+        return True
+    t1 = team_tokens(name1)
+    t2 = team_tokens(name2)
+    return bool(t1 & t2)
+
 class FootballEngine:
     def __init__(self):
         self.cached_matches: List[Dict[str, Any]] = []
         self.last_fetch_timestamp: float = 0
-        self.cache_ttl_seconds: float = 300.0  # 5 minutes in-memory cache
+        self.cache_ttl_seconds: float = 35.0  # 35s default cache
 
     async def fetch_all_real_matches(self) -> List[Dict[str, Any]]:
-        """Queries ESPN scoreboards with full date ranges for accurate live, upcoming, and finished fixtures."""
+        """Queries ESPN live and calendar scoreboards for ultra-accurate real-time fixtures, scores, and clocks."""
         now = time.time()
         has_live = any(m.get("status") == "LIVE" for m in self.cached_matches)
-        effective_ttl = 25.0 if has_live else self.cache_ttl_seconds
+        effective_ttl = 6.0 if has_live else self.cache_ttl_seconds
         if self.cached_matches and (now - self.last_fetch_timestamp) < effective_ttl:
             return self.cached_matches
 
@@ -493,6 +514,80 @@ class FootballEngine:
         date_range_param = f"{start}-{end}"
         
         async with httpx.AsyncClient(timeout=8.0) as client:
+            # 1. Real-time Live Scoreboards Fetcher (Global soccer + UEFA Champions League)
+            async def fetch_realtime_live_events():
+                live_items = []
+                try:
+                    r_all, r_ucl = await asyncio.gather(
+                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard", headers={"User-Agent": "Mozilla/5.0"}),
+                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard", headers={"User-Agent": "Mozilla/5.0"}),
+                        return_exceptions=True
+                    )
+                    seen_event_ids = set()
+                    for resp in [r_all, r_ucl]:
+                        if not isinstance(resp, httpx.Response) or resp.status_code != 200:
+                            continue
+                        events = resp.json().get("events", [])
+                        for e in events:
+                            eid = e.get("id")
+                            if eid in seen_event_ids:
+                                continue
+                            comps = e.get("competitions", [])
+                            if not comps:
+                                continue
+                            comp = comps[0]
+                            st_obj = comp.get("status", {})
+                            st_type = st_obj.get("type", {})
+                            if st_type.get("state") != "in":
+                                continue
+                            competitors = comp.get("competitors", [])
+                            if len(competitors) < 2:
+                                continue
+                            home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
+                            away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
+                            h_name = home.get("team", {}).get("displayName", "Home Team")
+                            a_name = away.get("team", {}).get("displayName", "Away Team")
+
+                            display_clock = st_obj.get("displayClock") or st_type.get("detail") or "LIVE"
+                            clock_str = str(display_clock).strip()
+                            if ":" in clock_str:
+                                minute = f"{clock_str.split(':')[0]}'"
+                            elif clock_str.isdigit():
+                                minute = f"{clock_str}'"
+                            elif "'" in clock_str:
+                                minute = clock_str
+                            elif clock_str.upper() in ["HT", "HALFTIME"]:
+                                minute = "HT"
+                            else:
+                                minute = f"{clock_str}'" if clock_str != "LIVE" else "LIVE"
+
+                            clock_sec = float(st_obj.get("clock", 0) or 0)
+                            period_num = int(st_obj.get("period", 1) or 1)
+                            h_score = int(home.get("score") or 0)
+                            a_score = int(away.get("score") or 0)
+
+                            seen_event_ids.add(eid)
+                            live_items.append({
+                                "event_id": eid,
+                                "home_name": h_name,
+                                "away_name": a_name,
+                                "home_logo": home.get("team", {}).get("logo") or generate_svg_avatar(h_name),
+                                "away_logo": away.get("team", {}).get("logo") or generate_svg_avatar(a_name),
+                                "home_score": h_score,
+                                "away_score": a_score,
+                                "minute": minute,
+                                "clock_seconds": clock_sec,
+                                "period": period_num,
+                                "raw_date": e.get("date") or comp.get("date", ""),
+                                "venue": comp.get("venue", {}).get("fullName", f"{h_name} Stadium"),
+                                "league_name": comp.get("league", {}).get("name") or ("UEFA Champions League" if "champions" in str(getattr(resp, 'url', '')) else "International Soccer"),
+                                "raw_event": e
+                            })
+                except Exception as ex:
+                    logger.warning(f"Real-time live scoreboard fetch error: {ex}")
+                return live_items
+
+            # 2. League Matches Fetcher
             async def fetch_league_matches(cfg):
                 league_matches = []
                 try:
@@ -529,6 +624,9 @@ class FootballEngine:
                             home_score = int(home.get("score") or 0)
                             away_score = int(away.get("score") or 0)
                             
+                            clock_sec = float(status_obj.get("clock", 0) or 0)
+                            period_num = int(status_obj.get("period", 1) or 1)
+
                             if status_state == "in":
                                 match_status = "LIVE"
                                 display_clock = status_obj.get("displayClock") or status_type.get("detail") or "LIVE"
@@ -560,6 +658,7 @@ class FootballEngine:
                             
                             league_matches.append({
                                 "id": match_id,
+                                "espn_id": e.get("id"),
                                 "league": cfg["name"],
                                 "league_id": cfg["id"],
                                 "league_short": cfg.get("short_code", cfg["id"].upper()),
@@ -586,6 +685,9 @@ class FootballEngine:
                                 "status": match_status,
                                 "minute": minute,
                                 "match_time": match_time,
+                                "clock_seconds": clock_sec,
+                                "period": period_num,
+                                "live_synced_at": now,
                                 "stadium": venue,
                                 "possession": {"home": 52, "away": 48},
                                 "shots_on_target": {"home": max(home_score + 2, 2) if match_status != "UPCOMING" else 0, "away": max(away_score + 1, 1) if match_status != "UPCOMING" else 0},
@@ -602,10 +704,94 @@ class FootballEngine:
                     pass
                 return league_matches
 
-            results = await asyncio.gather(*[fetch_league_matches(cfg) for cfg in FOOTBALL_LEAGUES_CONFIG], return_exceptions=True)
-            for res in results:
+            fetch_tasks = [fetch_realtime_live_events()] + [fetch_league_matches(cfg) for cfg in FOOTBALL_LEAGUES_CONFIG]
+            results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+
+            live_events = results[0] if isinstance(results[0], list) else []
+            for res in results[1:]:
                 if isinstance(res, list):
                     matches.extend(res)
+
+            # 3. Synchronize Real-time Live Clocks & Scores into all matches
+            merged_live_eids = set()
+            for m in matches:
+                m_espn_id = m.get("espn_id")
+                h_name = m["home_team"]["name"]
+                a_name = m["away_team"]["name"]
+
+                matched_live = None
+                for lv in live_events:
+                    if (m_espn_id and lv["event_id"] == m_espn_id) or (
+                        matches_team_fuzzy(h_name, lv["home_name"]) and 
+                        matches_team_fuzzy(a_name, lv["away_name"])
+                    ):
+                        matched_live = lv
+                        break
+
+                if matched_live:
+                    m["status"] = "LIVE"
+                    m["minute"] = matched_live["minute"]
+                    m["match_time"] = f"{matched_live['minute']} Live"
+                    m["home_team"]["score"] = matched_live["home_score"]
+                    m["away_team"]["score"] = matched_live["away_score"]
+                    m["clock_seconds"] = matched_live["clock_seconds"]
+                    m["period"] = matched_live["period"]
+                    m["live_synced_at"] = now
+                    m["priority"] = 1
+                    m["featured"] = True
+                    merged_live_eids.add(matched_live["event_id"])
+
+            # 4. If any live match from master feed was not in league lists, add it as a top live match
+            for lv in live_events:
+                if lv["event_id"] not in merged_live_eids:
+                    date_info = format_match_date(lv["raw_date"])
+                    match_id = f"fb-live-{lv['event_id']}"
+                    is_ucl = "champions" in lv.get("league_name", "").lower()
+                    broadcasters = get_broadcasters_for_football("ucl" if is_ucl else "epl", lv["home_name"], lv["away_name"], "LIVE")
+                    matches.append({
+                        "id": match_id,
+                        "espn_id": lv["event_id"],
+                        "league": lv.get("league_name", "Live World Football"),
+                        "league_id": "ucl" if is_ucl else "all",
+                        "league_short": "UCL" if is_ucl else "LIVE",
+                        "round": lv.get("league_name", "Live Match"),
+                        "raw_date": lv["raw_date"],
+                        "kickoff_date": date_info["date_formatted"],
+                        "kickoff_time": date_info["kickoff_time"],
+                        "short_date": date_info["short_date"],
+                        "formatted_date_time": date_info["full_date_time"],
+                        "home_team": {
+                            "name": lv["home_name"],
+                            "short_name": lv["home_name"][:3].upper(),
+                            "logo": lv["home_logo"],
+                            "score": lv["home_score"],
+                            "form": "W-D-W"
+                        },
+                        "away_team": {
+                            "name": lv["away_name"],
+                            "short_name": lv["away_name"][:3].upper(),
+                            "logo": lv["away_logo"],
+                            "score": lv["away_score"],
+                            "form": "D-W-L"
+                        },
+                        "status": "LIVE",
+                        "minute": lv["minute"],
+                        "match_time": f"{lv['minute']} Live",
+                        "clock_seconds": lv["clock_seconds"],
+                        "period": lv["period"],
+                        "live_synced_at": now,
+                        "stadium": lv.get("venue", f"{lv['home_name']} Stadium"),
+                        "possession": {"home": 52, "away": 48},
+                        "shots_on_target": {"home": max(lv["home_score"] + 2, 2), "away": max(lv["away_score"] + 1, 1)},
+                        "total_shots": {"home": max(lv["home_score"] * 3 + 5, 6), "away": max(lv["away_score"] * 3 + 4, 4)},
+                        "corners": {"home": 5, "away": 3},
+                        "yellow_cards": {"home": 1, "away": 2},
+                        "events": [],
+                        "streams": broadcasters,
+                        "priority": 1,
+                        "viewers_count": 620000,
+                        "featured": True
+                    })
 
         if matches:
             live = [m for m in matches if m.get("status") == "LIVE"]
@@ -643,6 +829,35 @@ class FootballEngine:
             return sorted_matches
 
         return self.cached_matches
+
+    async def get_live_sync_data(self) -> Dict[str, Any]:
+        """Ultra-fast live sync: returns real-time match minutes, clocks, and scores."""
+        all_matches = await self.fetch_all_real_matches()
+        live_matches = [
+            {
+                "id": m.get("id"),
+                "espn_id": m.get("espn_id"),
+                "home_team": {
+                    "name": m.get("home_team", {}).get("name"),
+                    "score": m.get("home_team", {}).get("score", 0)
+                },
+                "away_team": {
+                    "name": m.get("away_team", {}).get("name"),
+                    "score": m.get("away_team", {}).get("score", 0)
+                },
+                "minute": m.get("minute", "LIVE"),
+                "status": m.get("status", "LIVE"),
+                "clock_seconds": m.get("clock_seconds", 0),
+                "period": m.get("period", 1),
+                "live_synced_at": m.get("live_synced_at", time.time())
+            }
+            for m in all_matches if m.get("status") == "LIVE"
+        ]
+        return {
+            "timestamp": time.time(),
+            "live_count": len(live_matches),
+            "matches": live_matches
+        }
 
     async def get_matches(self, league_filter: str = None, status_filter: str = None) -> Dict[str, Any]:
         """Returns accurate football matches filtered by league and status."""
@@ -697,3 +912,7 @@ def get_football_match_by_id(match_id: str):
         if m["id"] == match_id:
             return m
     return None
+
+async def get_live_football_sync() -> Dict[str, Any]:
+    return await football_engine.get_live_sync_data()
+

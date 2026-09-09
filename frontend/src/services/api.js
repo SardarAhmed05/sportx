@@ -24,6 +24,18 @@ export async function fetchOverview(sport = 'football') {
   return res.json();
 }
 
+export async function fetchLiveSync(sport = 'football') {
+  try {
+    const params = new URLSearchParams();
+    if (sport) params.append('sport', sport);
+    const res = await fetchWithTimeout(`${API_BASE}/matches/live-sync?${params.toString()}`, {}, 5000);
+    if (!res.ok) return null;
+    return res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function fetchFootballMatches(league = null, sport = 'football') {
   const params = new URLSearchParams();
   if (league) params.append('league', league);

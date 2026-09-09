@@ -138,7 +138,7 @@ export default function FootballSection({
             return (
               <div
                 key={m.id}
-                className="bg-white dark:bg-slate-900 hover:bg-slate-50/70 dark:hover:bg-slate-850 rounded-2xl p-4 border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
+                className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 transition-all duration-200 flex flex-col justify-between group shadow-2xs hover:shadow-xl hover:shadow-emerald-500/5 dark:hover:shadow-emerald-950/30 hover:-translate-y-0.5"
               >
                 <div>
                   {/* League Header & Status Badge */}
@@ -172,7 +172,7 @@ export default function FootballSection({
                   </div>
 
                   {/* PROMINENT DATE & KICKOFF TIME BANNER (in PKT) */}
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 mb-2.5 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60 text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 mb-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
                     <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="font-bold text-slate-900 dark:text-white">{m.kickoff_date || m.short_date}</span>
                     <span className="text-slate-400">&bull;</span>
@@ -183,7 +183,7 @@ export default function FootballSection({
                   {/* Match Up: Home vs Away */}
                   <div 
                     onClick={() => onSelectMatch({ type: 'match', sport: sportName || 'Football', data: m })}
-                    className="cursor-pointer py-3 px-3 bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100/90 dark:hover:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 transition-colors my-1"
+                    className="cursor-pointer py-3 px-3 bg-slate-50/60 dark:bg-slate-950/40 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 rounded-xl border border-slate-200/70 dark:border-slate-800/70 transition-all duration-200 my-1 group/match"
                   >
                     <div className="flex items-center justify-between gap-2">
                       {/* Home Team */}
@@ -262,7 +262,7 @@ export default function FootballSection({
                 <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                   <button
                     onClick={() => onOpenStats && onOpenStats(m)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                    className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all duration-150 cursor-pointer border border-slate-200/90 dark:border-slate-700"
                     title="Match Statistics"
                   >
                     <BarChart2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
@@ -308,14 +308,14 @@ export default function FootballSection({
         <div className="pt-6 pb-2 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => setVisibleLimit(prev => prev + 18)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-sm transition-all cursor-pointer hover:scale-[1.01]"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:border-emerald-500/60 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-900 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
           >
             <ChevronDown className="w-4 h-4 text-emerald-500" />
             <span>Load More Matches (+18)</span>
           </button>
           <button
             onClick={() => setVisibleLimit(filteredMatches.length)}
-            className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
           >
             Show All ({filteredMatches.length})
           </button>
@@ -330,7 +330,7 @@ export default function FootballSection({
               setVisibleLimit(INITIAL_LIMIT);
               window.scrollTo({ top: 300, behavior: 'smooth' });
             }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
           >
             <ChevronUp className="w-4 h-4 text-slate-400" />
             <span>Show Less (Top 18 Only)</span>

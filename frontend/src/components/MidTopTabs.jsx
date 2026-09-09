@@ -163,22 +163,22 @@ export default function MidTopTabs({
         </button>
       </div>
 
-      {/* 2. SUB-FILTERS: COMPACT DROPDOWNS BAR (Replaces multi-row buttons to eliminate clutter) */}
+      {/* 2. SUB-FILTERS: COMPACT DROPDOWNS POSITIONED AT CORNERS OF CENTRAL SECTION */}
       {activeSection === 'matches' && (
-        <div className="w-full max-w-2xl mx-auto flex items-center justify-center gap-2.5 sm:gap-3 py-1">
+        <div className="w-full flex items-center justify-between gap-3 pt-1.5 pb-0.5">
           
-          {/* Status Filter Dropdown */}
-          <div ref={statusRef} className="relative flex-1 min-w-[140px] sm:min-w-[190px]">
+          {/* Left Corner: Status Filter Dropdown */}
+          <div ref={statusRef} className="relative w-auto min-w-[140px] sm:min-w-[190px]">
             <button
               type="button"
               onClick={() => {
                 setIsStatusOpen(!isStatusOpen);
                 setIsLeagueOpen(false);
               }}
-              className={`w-full flex items-center justify-between gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer select-none shadow-xs ${
+              className={`w-full flex items-center justify-between gap-2.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold border transition-all duration-200 cursor-pointer select-none shadow-2xs ${
                 isStatusOpen 
-                  ? 'bg-white dark:bg-slate-800 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white' 
-                  : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                  ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white shadow-md' 
+                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:shadow-md hover:shadow-emerald-500/5'
               }`}
             >
               <div className="flex items-center gap-2 truncate">
@@ -197,13 +197,13 @@ export default function MidTopTabs({
                 }`}>
                   {currentStatusObj?.count || 0}
                 </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isStatusOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isStatusOpen ? 'rotate-180 text-emerald-500' : ''}`} />
               </div>
             </button>
 
-            {/* Status Dropdown Menu */}
+            {/* Status Dropdown Menu (Left-aligned) */}
             {isStatusOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150 space-y-0.5">
+              <div className="absolute top-full left-0 mt-1.5 w-56 sm:w-64 p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150 space-y-1">
                 {STATUS_BUTTONS.map((item) => {
                   const isSelected = (selectedStatus || 'all') === item.id;
                   const ItemIcon = item.icon;
@@ -214,10 +214,10 @@ export default function MidTopTabs({
                         setSelectedStatus(item.id);
                         setIsStatusOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer select-none ${
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer select-none ${
                         isSelected
-                          ? (item.isLive ? 'bg-red-500 text-white font-black' : 'bg-emerald-600 text-white font-black')
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          ? (item.isLive ? 'bg-red-500 text-white font-black shadow-xs' : 'bg-emerald-600 text-white font-black shadow-xs')
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
@@ -240,18 +240,18 @@ export default function MidTopTabs({
             )}
           </div>
 
-          {/* League Filter Dropdown */}
-          <div ref={leagueRef} className="relative flex-1 min-w-[150px] sm:min-w-[210px]">
+          {/* Right Corner: League Filter Dropdown */}
+          <div ref={leagueRef} className="relative w-auto min-w-[150px] sm:min-w-[210px]">
             <button
               type="button"
               onClick={() => {
                 setIsLeagueOpen(!isLeagueOpen);
                 setIsStatusOpen(false);
               }}
-              className={`w-full flex items-center justify-between gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer select-none shadow-xs ${
+              className={`w-full flex items-center justify-between gap-2.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold border transition-all duration-200 cursor-pointer select-none shadow-2xs ${
                 isLeagueOpen 
-                  ? 'bg-white dark:bg-slate-800 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white' 
-                  : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                  ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white shadow-md' 
+                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:shadow-md hover:shadow-emerald-500/5'
               }`}
             >
               <div className="flex items-center gap-2 truncate">
@@ -262,13 +262,13 @@ export default function MidTopTabs({
                 <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {currentLeagueObj?.short || 'ALL'}
                 </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isLeagueOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isLeagueOpen ? 'rotate-180 text-emerald-500' : ''}`} />
               </div>
             </button>
 
-            {/* League Dropdown Menu */}
+            {/* League Dropdown Menu (Right-aligned) */}
             {isLeagueOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl z-50 max-h-64 overflow-y-auto scrollbar-thin animate-in fade-in slide-in-from-top-1 duration-150 space-y-0.5">
+              <div className="absolute top-full right-0 mt-1.5 w-60 sm:w-72 p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl z-50 max-h-72 overflow-y-auto scrollbar-thin animate-in fade-in slide-in-from-top-1 duration-150 space-y-1">
                 {displayLeagues.map((l) => {
                   const isSelected = selectedLeague === l.id;
                   return (
@@ -278,10 +278,10 @@ export default function MidTopTabs({
                         setSelectedLeague(l.id);
                         setIsLeagueOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer select-none ${
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer select-none ${
                         isSelected
-                          ? 'bg-emerald-600 text-white font-black'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          ? 'bg-emerald-600 text-white font-black shadow-xs'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300'
                       }`}
                     >
                       <span className="truncate">{l.label}</span>

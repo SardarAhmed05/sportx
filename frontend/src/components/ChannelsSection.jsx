@@ -158,7 +158,7 @@ export default function ChannelsSection({
         {sortedChannels.map((ch) => (
           <div
             key={ch.id}
-            className="bg-white dark:bg-slate-900 hover:bg-slate-50/70 dark:hover:bg-slate-850 border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
+            className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between group shadow-2xs hover:shadow-xl hover:shadow-emerald-500/5 dark:hover:shadow-emerald-950/30 hover:-translate-y-0.5"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2.5">

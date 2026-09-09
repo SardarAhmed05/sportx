@@ -138,7 +138,10 @@ export default function VideoPlayer({
       fetchLiveStreams(home, away, matchData?.sport || 'football')
         .then(res => {
           if (res?.servers && res.servers.length > 0) {
-            setDynamicLiveStreams(res.servers);
+            const valid = filterValidStreamServers(res.servers);
+            if (valid.length > 0) {
+              setDynamicLiveStreams(valid);
+            }
           }
         })
         .catch(err => console.warn('Live stream resolution error:', err))
@@ -146,25 +149,42 @@ export default function VideoPlayer({
     }
   }, [matchData?.id, matchData?.home_team?.name, matchData?.away_team?.name, matchData?.status]);
 
+  const filterValidStreamServers = (serversList) => {
+    if (!Array.isArray(serversList)) return [];
+    return serversList.filter(s => {
+      if (!s || !s.url) return false;
+      const u = s.url.toLowerCase();
+      // Strictly reject full-page portal links like streamed.pk/watch or general webpage views
+      if (u.includes('/watch/') || u.includes('streamed.pk') || u.includes('streamed.su')) {
+        return false;
+      }
+      return true;
+    });
+  };
+
   const getStreamsList = () => {
     if (!streamItem) return [];
     // If this match already has verified curated replay mirrors (YouTube + Dailymotion), use them directly
     if (matchData?.streams?.length >= 2 && (matchData?.is_cult_classic || matchData?.duration || matchData?.year)) {
-      return matchData.streams;
+      return filterValidStreamServers(matchData.streams);
     }
     // Dynamic live streams resolved in real-time
-    if (dynamicLiveStreams.length > 0) {
-      return dynamicLiveStreams;
+    const validLive = filterValidStreamServers(dynamicLiveStreams);
+    if (validLive.length > 0) {
+      return validLive;
     }
     // Dynamic replay streams resolved in real-time
-    if (dynamicReplayStreams.length > 0) {
-      return dynamicReplayStreams;
+    const validReplays = filterValidStreamServers(dynamicReplayStreams);
+    if (validReplays.length > 0) {
+      return validReplays;
     }
-    if (matchData?.streams?.length > 0) {
-      return matchData.streams;
+    const validMatchStreams = filterValidStreamServers(matchData?.streams);
+    if (validMatchStreams.length > 0) {
+      return validMatchStreams;
     }
-    if (streamItem?.streams?.length > 0) {
-      return streamItem.streams;
+    const validItemStreams = filterValidStreamServers(streamItem?.streams);
+    if (validItemStreams.length > 0) {
+      return validItemStreams;
     }
     const mainStream = {
       id: 'main-srv',

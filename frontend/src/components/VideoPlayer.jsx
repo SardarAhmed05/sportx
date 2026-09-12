@@ -22,7 +22,9 @@ import {
   Clock,
   ShieldCheck,
   Zap,
-  ExternalLink
+  ExternalLink,
+  RotateCcw,
+  PictureInPicture
 } from 'lucide-react';
 import { getProxiedStreamUrl, checkStreamHealth, fetchReplayStreams, fetchLiveStreams } from '../services/api';
 
@@ -86,6 +88,29 @@ export default function VideoPlayer({
       } catch (e) {}
       return next;
     });
+  };
+
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const handleReloadStream = useCallback(() => {
+    setIsBuffering(true);
+    setIsIframeLoading(true);
+    setStreamError(null);
+    setAutoFailoverMessage('Reconnecting stream feed...');
+    setReloadKey((k) => k + 1);
+    setTimeout(() => setAutoFailoverMessage(''), 2500);
+  }, []);
+
+  const handleTogglePiP = async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (videoRef.current && document.pictureInPictureEnabled) {
+        await videoRef.current.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn('PiP not supported or allowed:', err);
+    }
   };
 
   const matchData = streamItem?.data || streamItem;
@@ -486,6 +511,29 @@ export default function VideoPlayer({
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        handleReloadStream();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        toggleTheater();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        if (streams.length > 1) {
+          setSelectedServerIndex((prev) => (prev + 1) % streams.length);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [streams.length, handleReloadStream]);
+
   if (!streamItem) return null;
 
   const matchTitle = matchData?.title || (
@@ -546,7 +594,39 @@ export default function VideoPlayer({
         </div>
 
         {/* Right Tools */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Ad-Shield Active Protection Badge */}
+          <div 
+            className="px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5"
+            title="Ad-Shield Active: Popups and malicious scripts are blocked"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="hidden sm:inline">Ad-Shield</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+
+          {/* Stream Reconnect / Reload Button */}
+          <button
+            onClick={handleReloadStream}
+            className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Reload / Reconnect current broadcast feed (Press R)"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Reconnect</span>
+          </button>
+
+          {/* Picture in Picture Button (video only) */}
+          {!isEmbedStream && (
+            <button
+              onClick={handleTogglePiP}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Picture-in-Picture mode"
+            >
+              <PictureInPicture className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">PiP</span>
+            </button>
+          )}
+
           {/* Proxy Relay Toggle Button */}
           {!isEmbedStream && (
             <button
@@ -596,7 +676,7 @@ export default function VideoPlayer({
                 ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
-            title={isTheater ? 'Switch to Fit Screen Mode' : 'Switch to Wide Theater Mode'}
+            title={isTheater ? 'Switch to Fit Screen Mode (Press T)' : 'Switch to Wide Theater Mode (Press T)'}
           >
             {isTheater ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{isTheater ? 'Fit Screen' : 'Theater'}</span>
@@ -613,6 +693,35 @@ export default function VideoPlayer({
           )}
         </div>
       </div>
+
+      {/* Quick Server Switcher Strip */}
+      {streams.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <span className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider shrink-0 mr-1">
+            Servers:
+          </span>
+          {streams.map((srv, idx) => (
+            <button
+              key={srv.id || idx}
+              onClick={() => {
+                setSelectedServerIndex(idx);
+                setStreamError(null);
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedServerIndex === idx
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${selectedServerIndex === idx ? 'bg-white' : 'bg-slate-400'}`}></span>
+              <span>Server {idx + 1}</span>
+              <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedServerIndex === idx ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                {srv.quality || '1080p'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Top Helper Banner: Doesn't work? Try switching to another server */}
       {streams.length > 1 && !isHelperDismissed && !neverShowHelper && (
@@ -667,7 +776,8 @@ export default function VideoPlayer({
       <div 
         ref={containerRef}
         style={{
-          maxWidth: isTheater ? '100%' : 'min(100%, calc((100vh - 220px) * 16 / 9))'
+          maxWidth: isTheater ? '100%' : 'min(100%, calc((100vh - 200px) * 16 / 9))',
+          maxHeight: isTheater ? 'none' : 'min(80vh, 720px)'
         }}
         className="relative w-full aspect-video rounded-xl sm:rounded-2xl bg-black overflow-hidden shadow-2xl flex items-center justify-center group mx-auto transition-all duration-300"
       >
@@ -707,11 +817,12 @@ export default function VideoPlayer({
 
         {isEmbedStream ? (
           <iframe
-            key={activeStreamUrl}
+            key={`${activeStreamUrl}-${reloadKey}`}
             src={formatAutoPlayUrl(activeStreamUrl)}
             title={matchTitle}
             className="w-full h-full border-0 relative z-1"
             referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-encrypted-media"
             allow="accelerometer; autoplay *; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen *"
             allowFullScreen
             onLoad={() => setIsIframeLoading(false)}

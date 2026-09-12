@@ -21,8 +21,9 @@ export default function HeroBanner({ marqueeMatch, onWatchMatch, onOpenStats }) 
               <span className="w-2 h-2 rounded-full bg-red-500 animate-live-dot"></span>
               MARQUEE MATCH &bull; {marqueeMatch.minute || 'LIVE NOW'}
             </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold border border-emerald-500/30">
-              ⚽ {marqueeMatch.league || 'Premier League'}
+            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold border border-emerald-500/30 flex items-center gap-1">
+              <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{marqueeMatch.league || 'Premier League'}</span>
             </span>
             <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-emerald-400" />

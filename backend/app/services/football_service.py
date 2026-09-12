@@ -798,8 +798,11 @@ class FootballEngine:
             upcoming = [m for m in matches if m.get("status") in ["UPCOMING", "SCHEDULED"]]
             finished = [m for m in matches if m.get("status") in ["FINISHED", "FT"]]
 
-            # Sort live by date
-            live.sort(key=lambda m: m.get("raw_date", ""))
+            # Sort live: Premier League matches first, then chronological
+            def live_sort_key(m):
+                is_epl = m.get("league_id") == "epl" or "premier" in (m.get("league") or "").lower()
+                return (0 if is_epl else 1, m.get("raw_date", ""))
+            live.sort(key=live_sort_key)
             
             # Enrich live matches with real-time verified broadcast streams
             if live:

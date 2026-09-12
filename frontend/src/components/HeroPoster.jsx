@@ -12,6 +12,7 @@ import {
   Video,
   PlayCircle
 } from 'lucide-react';
+import { handleLogoError } from '../utils/avatar';
 
 export default function HeroPoster({ 
   matches = [], 
@@ -48,6 +49,16 @@ export default function HeroPoster({
   const isUpcoming = currentMatch.status === 'UPCOMING' || currentMatch.status === 'SCHEDULED';
   const isFinished = currentMatch.status === 'FINISHED' || currentMatch.status === 'FT';
   const streams = currentMatch.streams || [];
+
+  const isCricketOrLong = Boolean(
+    sportName?.toLowerCase() === 'cricket' ||
+    currentMatch.sport_id === 'cricket' ||
+    String(currentMatch.home_team?.display_score || '').includes('&') ||
+    String(currentMatch.home_team?.display_score || '').includes('/') ||
+    String(currentMatch.away_team?.display_score || '').includes('&') ||
+    String(currentMatch.away_team?.display_score || '').includes('/') ||
+    (String(currentMatch.home_team?.display_score || '').length + String(currentMatch.away_team?.display_score || '').length > 7)
+  );
 
   const handlePrev = useCallback(() => {
     setIsAutoPlaying(false);
@@ -164,6 +175,7 @@ export default function HeroPoster({
               <img 
                 src={currentMatch.home_team?.logo} 
                 alt={currentMatch.home_team?.name}
+                onError={(e) => handleLogoError(e, currentMatch.home_team?.name)}
                 className="w-full h-full object-contain filter drop-shadow-md"
               />
             </div>
@@ -172,7 +184,13 @@ export default function HeroPoster({
               <h2 className="text-sm sm:text-xl lg:text-2xl font-black text-white tracking-tight leading-snug truncate">
                 {currentMatch.home_team?.name}
               </h2>
-              <span className="hidden sm:block text-xs text-slate-300 font-medium">{currentMatch.home_team?.form || 'Form: W-D-W'}</span>
+              {isCricketOrLong && (currentMatch.home_team?.display_score || currentMatch.home_team?.score) ? (
+                <div className="text-base sm:text-2xl font-black text-emerald-400 font-mono mt-0.5">
+                  {currentMatch.home_team?.display_score || currentMatch.home_team?.score}
+                </div>
+              ) : (
+                <span className="hidden sm:block text-xs text-slate-300 font-medium">{currentMatch.home_team?.form || 'Form: W-D-W'}</span>
+              )}
             </div>
           </div>
 
@@ -183,6 +201,16 @@ export default function HeroPoster({
                 <span className="text-lg sm:text-2xl lg:text-3xl font-black text-sky-400 tracking-wider font-mono">VS</span>
                 <div className="text-[9px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">
                   {currentMatch.kickoff_time || 'Scheduled'}
+                </div>
+              </div>
+            ) : isCricketOrLong ? (
+              <div className="text-center">
+                <div className="text-base sm:text-xl font-black text-emerald-400 tracking-wider font-mono">
+                  {isLive ? 'LIVE' : 'FINAL'}
+                </div>
+                <div className="text-[9px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider mt-0.5 flex items-center justify-center gap-1">
+                  {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>}
+                  <span>{currentMatch.minute || (isLive ? 'In Play' : 'Full Time')}</span>
                 </div>
               </div>
             ) : (
@@ -204,6 +232,7 @@ export default function HeroPoster({
               <img 
                 src={currentMatch.away_team?.logo} 
                 alt={currentMatch.away_team?.name}
+                onError={(e) => handleLogoError(e, currentMatch.away_team?.name)}
                 className="w-full h-full object-contain filter drop-shadow-md"
               />
             </div>
@@ -212,7 +241,13 @@ export default function HeroPoster({
               <h2 className="text-sm sm:text-xl lg:text-2xl font-black text-white tracking-tight leading-snug truncate">
                 {currentMatch.away_team?.name}
               </h2>
-              <span className="hidden sm:block text-xs text-slate-300 font-medium">{currentMatch.away_team?.form || 'Form: D-W-L'}</span>
+              {isCricketOrLong && (currentMatch.away_team?.display_score || currentMatch.away_team?.score) ? (
+                <div className="text-base sm:text-2xl font-black text-emerald-400 font-mono mt-0.5">
+                  {currentMatch.away_team?.display_score || currentMatch.away_team?.score}
+                </div>
+              ) : (
+                <span className="hidden sm:block text-xs text-slate-300 font-medium">{currentMatch.away_team?.form || 'Form: D-W-L'}</span>
+              )}
             </div>
           </div>
 

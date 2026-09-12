@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Trophy, 
   Play, 
@@ -9,10 +9,11 @@ import {
   CheckCircle2, 
   Video, 
   PlayCircle,
-  ChevronDown,
-  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   ArrowRight
 } from 'lucide-react';
+import { handleLogoError } from '../utils/avatar';
 
 export default function FootballSection({ 
   matches = [], 
@@ -23,8 +24,13 @@ export default function FootballSection({
   onSwitchToReplays,
   sportName = 'Football'
 }) {
-  const INITIAL_LIMIT = 18;
-  const [visibleLimit, setVisibleLimit] = useState(INITIAL_LIMIT);
+  const PAGE_SIZE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLeague, selectedStatus, sportName]);
 
   // 1. Filter by league and status
   const filteredMatches = matches.filter(m => {
@@ -48,43 +54,45 @@ export default function FootballSection({
     return true;
   });
 
-  // 2. Strictly sort finished matches descending (most recent / previous match first)
-  let processedMatches = filteredMatches;
-  if (selectedStatus === 'finished') {
-    processedMatches = [...filteredMatches].sort((a, b) => {
+  // 2. Sort matches:
+  // - LIVE matches first (with Premier League live matches strictly prioritized first)
+  // - Then UPCOMING matches
+  // - Then FINISHED matches (descending, most recent first)
+  const sortedMatches = [...filteredMatches].sort((a, b) => {
+    const isLiveA = a.status === 'LIVE';
+    const isLiveB = b.status === 'LIVE';
+
+    if (isLiveA && !isLiveB) return -1;
+    if (!isLiveA && isLiveB) return 1;
+
+    // If both are LIVE: Premier League live matches first
+    if (isLiveA && isLiveB) {
+      const isEplA = a.league_id === 'epl' || (a.league || '').toLowerCase().includes('premier');
+      const isEplB = b.league_id === 'epl' || (b.league || '').toLowerCase().includes('premier');
+      if (isEplA && !isEplB) return -1;
+      if (!isEplA && isEplB) return 1;
+      return (b.viewers_count || 0) - (a.viewers_count || 0);
+    }
+
+    const isUpcomingA = a.status === 'UPCOMING' || a.status === 'SCHEDULED';
+    const isUpcomingB = b.status === 'UPCOMING' || b.status === 'SCHEDULED';
+
+    if (isUpcomingA && !isUpcomingB) return -1;
+    if (!isUpcomingA && isUpcomingB) return 1;
+
+    // If both are finished: most recent first
+    if (!isUpcomingA && !isUpcomingB) {
       const timeA = a.raw_date ? new Date(a.raw_date).getTime() : 0;
       const timeB = b.raw_date ? new Date(b.raw_date).getTime() : 0;
       return timeB - timeA;
-    });
-  }
+    }
 
-  // 3. Apply limiting to prevent endless scrolling
-  let displayedMatches = [];
-  if (selectedStatus === 'upcoming') {
-    displayedMatches = processedMatches.slice(0, visibleLimit);
-  } else if (selectedStatus === 'all') {
-    const live = processedMatches.filter(m => m.status === 'LIVE');
-    const upcoming = processedMatches.filter(m => m.status === 'UPCOMING' || m.status === 'SCHEDULED');
-    const finished = processedMatches
-      .filter(m => m.status === 'FINISHED' || m.status === 'FT')
-      .sort((a, b) => {
-        const timeA = a.raw_date ? new Date(a.raw_date).getTime() : 0;
-        const timeB = b.raw_date ? new Date(b.raw_date).getTime() : 0;
-        return timeB - timeA;
-      });
-    
-    displayedMatches = [
-      ...live,
-      ...upcoming.slice(0, visibleLimit),
-      ...finished.slice(0, 12)
-    ];
-  } else if (selectedStatus === 'finished') {
-    displayedMatches = processedMatches.slice(0, visibleLimit);
-  } else {
-    displayedMatches = processedMatches;
-  }
+    return 0;
+  });
 
-  const hasMore = filteredMatches.length > displayedMatches.length;
+  // 3. 15 Matches Per Page Pagination Slicing
+  const totalPages = Math.max(1, Math.ceil(sortedMatches.length / PAGE_SIZE));
+  const displayedMatches = sortedMatches.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <section className="space-y-4">
@@ -93,8 +101,8 @@ export default function FootballSection({
         <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Match Fixtures & Live Feeds</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
-            Showing {displayedMatches.length} of {filteredMatches.length}
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+            Page {currentPage} of {totalPages} &bull; Showing {displayedMatches.length} of {sortedMatches.length}
           </span>
         </h3>
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -134,6 +142,17 @@ export default function FootballSection({
             const isLive = m.status === 'LIVE';
             const isUpcoming = m.status === 'UPCOMING' || m.status === 'SCHEDULED';
             const isFinished = m.status === 'FINISHED' || m.status === 'FT';
+
+            // Detect cricket or long test match scoreline
+            const isLongScore = Boolean(
+              sportName?.toLowerCase() === 'cricket' ||
+              m.sport_id === 'cricket' ||
+              String(m.home_team?.display_score || m.home_team?.score || '').includes('&') ||
+              String(m.home_team?.display_score || m.home_team?.score || '').includes('/') ||
+              String(m.away_team?.display_score || m.away_team?.score || '').includes('&') ||
+              String(m.away_team?.display_score || m.away_team?.score || '').includes('/') ||
+              (String(m.home_team?.display_score || '').length + String(m.away_team?.display_score || '').length > 7)
+            );
 
             return (
               <div
@@ -185,51 +204,99 @@ export default function FootballSection({
                     onClick={() => onSelectMatch({ type: 'match', sport: sportName || 'Football', data: m })}
                     className="cursor-pointer py-3 px-3 bg-slate-50/60 dark:bg-slate-950/40 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 rounded-xl border border-slate-200/70 dark:border-slate-800/70 transition-all duration-200 my-1 group/match"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Home Team */}
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
-                          <img 
-                            src={m.home_team?.logo} 
-                            alt={m.home_team?.name}
-                            className="w-full h-full object-contain"
-                          />
+                    {isLongScore ? (
+                      /* Stacked 2-row layout for cricket / long scores (never overlaps logos or names) */
+                      <div className="space-y-2 py-0.5">
+                        {/* Home Row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                              <img 
+                                src={m.home_team?.logo} 
+                                alt={m.home_team?.name}
+                                onError={(e) => handleLogoError(e, m.home_team?.name)}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                              {m.home_team?.name}
+                            </span>
+                          </div>
+                          <div className="font-mono font-black text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 shrink-0 text-right px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            {m.home_team?.display_score || m.home_team?.score || (isUpcoming ? 'VS' : '-')}
+                          </div>
                         </div>
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                          {m.home_team?.name}
-                        </span>
-                      </div>
 
-                      {/* Score or VS Badge */}
-                      <div className="px-2.5 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-center shrink-0 min-w-[54px] shadow-2xs">
-                        {isUpcoming ? (
-                          <span className="text-[11px] font-black text-sky-700 dark:text-sky-400 tracking-wider uppercase font-mono">
-                            VS
-                          </span>
-                        ) : (
-                          <span className="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-400 tracking-wider font-mono whitespace-nowrap">
-                            {(m.home_team?.display_score || m.home_team?.score) ?? 0} : {(m.away_team?.display_score || m.away_team?.score) ?? 0}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Away Team */}
-                      <div className="flex items-center justify-end gap-2.5 flex-1 min-w-0 text-right">
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                          {m.away_team?.name}
-                        </span>
-                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
-                          <img 
-                            src={m.away_team?.logo} 
-                            alt={m.away_team?.name}
-                            className="w-full h-full object-contain"
-                          />
+                        {/* Away Row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                              <img 
+                                src={m.away_team?.logo} 
+                                alt={m.away_team?.name}
+                                onError={(e) => handleLogoError(e, m.away_team?.name)}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                              {m.away_team?.name}
+                            </span>
+                          </div>
+                          <div className="font-mono font-black text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 shrink-0 text-right px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            {m.away_team?.display_score || m.away_team?.score || (isUpcoming ? 'VS' : '-')}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* Standard 1-row layout for football / short scores */
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Home Team */}
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                            <img 
+                              src={m.home_team?.logo} 
+                              alt={m.home_team?.name}
+                              onError={(e) => handleLogoError(e, m.home_team?.name)}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                            {m.home_team?.name}
+                          </span>
+                        </div>
+
+                        {/* Score or VS Badge */}
+                        <div className="px-2.5 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-center shrink-0 min-w-[54px] shadow-2xs">
+                          {isUpcoming ? (
+                            <span className="text-[11px] font-black text-sky-700 dark:text-sky-400 tracking-wider uppercase font-mono">
+                              VS
+                            </span>
+                          ) : (
+                            <span className="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-400 tracking-wider font-mono whitespace-nowrap">
+                              {(m.home_team?.display_score || m.home_team?.score) ?? 0} : {(m.away_team?.display_score || m.away_team?.score) ?? 0}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Away Team */}
+                        <div className="flex items-center justify-end gap-2.5 flex-1 min-w-0 text-right">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                            {m.away_team?.name}
+                          </span>
+                          <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 p-1 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                            <img 
+                              src={m.away_team?.logo} 
+                              alt={m.away_team?.name}
+                              onError={(e) => handleLogoError(e, m.away_team?.name)}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Multi-Server / Replay Selector Grid (Zero emojis) */}
+                  {/* Multi-Server / Replay Selector Grid */}
                   <div className="mt-3 space-y-1.5">
                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                       {isFinished ? <Video className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> : <Tv className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
@@ -303,38 +370,65 @@ export default function FootballSection({
         </div>
       )}
 
-      {/* Load More Fixtures Control (Solves endless scroll) */}
-      {hasMore && (
-        <div className="pt-6 pb-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button
-            onClick={() => setVisibleLimit(prev => prev + 18)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:border-emerald-500/60 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-900 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
-          >
-            <ChevronDown className="w-4 h-4 text-emerald-500" />
-            <span>Load More Matches (+18)</span>
-          </button>
-          <button
-            onClick={() => setVisibleLimit(filteredMatches.length)}
-            className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
-          >
-            Show All ({filteredMatches.length})
-          </button>
-        </div>
-      )}
+      {/* 15 Per Page Pagination Bar */}
+      {totalPages > 1 && (
+        <div className="pt-6 pb-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
+            Page <span className="text-slate-900 dark:text-white font-extrabold">{currentPage}</span> of <span className="text-slate-900 dark:text-white font-extrabold">{totalPages}</span> ({sortedMatches.length} matches &bull; 15 per page)
+          </div>
 
-      {/* Collapse control if expanded beyond initial limit */}
-      {!hasMore && filteredMatches.length > INITIAL_LIMIT && visibleLimit > INITIAL_LIMIT && (
-        <div className="pt-4 pb-2 flex justify-center">
-          <button
-            onClick={() => {
-              setVisibleLimit(INITIAL_LIMIT);
-              window.scrollTo({ top: 300, behavior: 'smooth' });
-            }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
-          >
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-            <span>Show Less (Top 18 Only)</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                setCurrentPage((p) => Math.max(1, p - 1));
+                window.scrollTo({ top: 350, behavior: 'smooth' });
+              }}
+              disabled={currentPage === 1}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .map((p, idx, arr) => {
+                const prev = arr[idx - 1];
+                return (
+                  <React.Fragment key={p}>
+                    {prev && p - prev > 1 && (
+                      <span className="px-1.5 text-xs text-slate-400 font-bold">...</span>
+                    )}
+                    <button
+                      onClick={() => {
+                        setCurrentPage(p);
+                        window.scrollTo({ top: 350, behavior: 'smooth' });
+                      }}
+                      className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        currentPage === p
+                          ? 'bg-emerald-600 text-white shadow-xs font-black'
+                          : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => {
+                setCurrentPage((p) => Math.min(totalPages, p + 1));
+                window.scrollTo({ top: 350, behavior: 'smooth' });
+              }}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="Next Page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </section>

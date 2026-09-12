@@ -123,3 +123,27 @@ export function getProxiedStreamUrl(originalUrl) {
   if (!originalUrl) return '';
   return `${API_BASE}/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
 }
+
+export async function fetchFeedback() {
+  const res = await fetchWithTimeout(`${API_BASE}/feedback`, {}, 8000);
+  if (!res.ok) throw new Error('Failed to fetch community feedback');
+  return res.json();
+}
+
+export async function submitFeedback(payload) {
+  const res = await fetchWithTimeout(`${API_BASE}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }, 8000);
+  if (!res.ok) throw new Error('Failed to submit feedback');
+  return res.json();
+}
+
+export async function likeFeedback(id) {
+  const res = await fetchWithTimeout(`${API_BASE}/feedback/${id}/like`, {
+    method: 'POST'
+  }, 5000);
+  if (!res.ok) throw new Error('Failed to like feedback');
+  return res.json();
+}

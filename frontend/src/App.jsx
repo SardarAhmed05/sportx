@@ -10,6 +10,7 @@ import FavoritesSection from './components/FavoritesSection';
 import FootballReplaysSection from './components/FootballReplaysSection';
 import MatchStatsModal from './components/MatchStatsModal';
 import CustomStreamModal from './components/CustomStreamModal';
+import FeedbackSection from './components/FeedbackSection';
 import Footer from './components/Footer';
 
 import { 
@@ -90,10 +91,11 @@ export default function App() {
     });
   };
 
-  // Navigation & View State
+  // Navigation & View State (Scoped strictly to Football, Cricket, Tennis)
   const [activeSport, setActiveSport] = useState(() => {
     try {
-      return localStorage.getItem('sportx_active_sport') || 'football';
+      const saved = localStorage.getItem('sportx_active_sport') || 'football';
+      return ['football', 'cricket', 'tennis'].includes(saved) ? saved : 'football';
     } catch {
       return 'football';
     }
@@ -220,21 +222,17 @@ export default function App() {
 
       if (overviewData) {
         setOverview(overviewData);
-        const matchesList = overviewData.matches?.matches || overviewData.football?.matches || [];
-        if (Array.isArray(matchesList) && matchesList.length > 0) {
-          setFootballMatches(matchesList);
-        }
+        const matchesList = overviewData.matches?.matches || overviewData.football?.matches || (Array.isArray(overviewData.matches) ? overviewData.matches : []);
+        setFootballMatches(Array.isArray(matchesList) ? matchesList : []);
+      } else {
+        setFootballMatches([]);
       }
 
       const chList = channelsData?.channels;
-      if (Array.isArray(chList) && chList.length > 0) {
-        setChannels(chList);
-      }
+      setChannels(Array.isArray(chList) ? chList : []);
 
       const repList = replaysData?.replays;
-      if (Array.isArray(repList) && repList.length > 0) {
-        setReplays(repList);
-      }
+      setReplays(Array.isArray(repList) ? repList : []);
 
       if (replaysData?.categories) {
         setReplaysCategories(replaysData.categories);
@@ -276,10 +274,11 @@ export default function App() {
 
   // Sport Switcher Handler
   const handleSelectSport = (newSport) => {
-    if (newSport === activeSport) return;
-    setActiveSport(newSport);
+    const s = ['football', 'cricket', 'tennis'].includes(newSport) ? newSport : 'football';
+    if (s === activeSport) return;
+    setActiveSport(s);
     try {
-      localStorage.setItem('sportx_active_sport', newSport);
+      localStorage.setItem('sportx_active_sport', s);
     } catch (e) {}
 
     setSelectedLeague('all');
@@ -287,20 +286,25 @@ export default function App() {
 
     // Instant Hydration from cached data for this sport if available
     try {
-      const cachedOverview = localStorage.getItem(`sportx_cached_overview_${newSport}`);
-      const cachedMatches = localStorage.getItem(`sportx_cached_matches_${newSport}`);
-      const cachedReplays = localStorage.getItem(`sportx_cached_replays_${newSport}`);
-      const cachedChannels = localStorage.getItem(`sportx_cached_channels_${newSport}`);
+      const cachedOverview = localStorage.getItem(`sportx_cached_overview_${s}`);
+      const cachedMatches = localStorage.getItem(`sportx_cached_matches_${s}`);
+      const cachedReplays = localStorage.getItem(`sportx_cached_replays_${s}`);
+      const cachedChannels = localStorage.getItem(`sportx_cached_channels_${s}`);
 
       if (cachedMatches) {
         if (cachedOverview) setOverview(JSON.parse(cachedOverview));
         setFootballMatches(JSON.parse(cachedMatches));
         if (cachedReplays) setReplays(JSON.parse(cachedReplays));
         if (cachedChannels) setChannels(JSON.parse(cachedChannels));
+      } else {
+        setFootballMatches([]);
+        setOverview(null);
+        setReplays([]);
+        setChannels([]);
       }
     } catch (e) {}
 
-    loadData(newSport);
+    loadData(s);
   };
 
   useEffect(() => {
@@ -719,6 +723,11 @@ export default function App() {
         onClose={() => setIsCustomStreamModalOpen(false)}
         onPlayCustomStream={handleSelectStream}
       />
+
+      {/* Community Feedback & Comments Section */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <FeedbackSection />
+      </div>
 
       {/* Footer */}
       <Footer

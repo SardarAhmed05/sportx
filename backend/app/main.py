@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 
-from app.routers import matches, channels, proxy, scraper
+from app.routers import matches, channels, proxy, scraper, feedback
 from app.services.stream_scraper import scraper_service
 
 @asynccontextmanager
@@ -41,6 +41,7 @@ app.include_router(matches.router)
 app.include_router(channels.router)
 app.include_router(proxy.router)
 app.include_router(scraper.router)
+app.include_router(feedback.router)
 
 @app.get("/")
 async def root():

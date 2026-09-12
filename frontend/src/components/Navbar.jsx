@@ -17,7 +17,8 @@ import {
   Target,
   ChevronDown,
   Check,
-  SlidersHorizontal
+  SlidersHorizontal,
+  MessageSquare
 } from 'lucide-react';
 import SportXLogo from './SportXLogo';
 
@@ -39,16 +40,11 @@ export const CricketIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-// CRICKET IS POSITIONED AT THE VERY TOP OF THE DROPDOWN LIST AS REQUESTED
+// Active sports: Football (Default), Cricket, and Tennis
 export const SPORTS_CONFIG = [
-  { id: 'cricket', name: 'Cricket', shortName: 'Cricket', subtitle: 'ICC World Cup, IPL, PSL, Tests', icon: CricketIcon },
   { id: 'football', name: 'Football', shortName: 'Football', subtitle: 'Premier League, UCL, La Liga', icon: Trophy },
-  { id: 'basketball', name: 'Basketball', shortName: 'NBA', subtitle: 'NBA, WNBA, NCAA', icon: CircleDot },
-  { id: 'nfl', name: 'American Football', shortName: 'NFL', subtitle: 'NFL, Super Bowl, College', icon: Shield },
-  { id: 'motorsport', name: 'Motorsport', shortName: 'F1', subtitle: 'Formula 1 Grand Prix', icon: Gauge },
+  { id: 'cricket', name: 'Cricket', shortName: 'Cricket', subtitle: 'ICC World Cup, IPL, PSL, Tests', icon: CricketIcon },
   { id: 'tennis', name: 'Tennis', shortName: 'Tennis', subtitle: 'ATP & WTA Grand Slams', icon: Crosshair },
-  { id: 'combat', name: 'Combat Sports', shortName: 'UFC', subtitle: 'UFC PPV & Boxing', icon: Swords },
-  { id: 'baseball', name: 'Baseball', shortName: 'MLB', subtitle: 'MLB World Series', icon: Target },
 ];
 
 export default function Navbar({ 
@@ -177,6 +173,19 @@ export default function Navbar({
               <span className="px-1.5 py-0.2 rounded-full bg-rose-200 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 text-[10px] font-black">
                 {favoritesCount}
               </span>
+            </button>
+
+            {/* 4. Drop Feedback Button */}
+            <button
+              onClick={() => {
+                const el = document.getElementById('feedback-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              title="Drop Community Feedback & Stream Requests"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[11px]">Feedback</span>
             </button>
           </div>
         </div>
@@ -360,6 +369,19 @@ export default function Navbar({
                 >
                   <Plus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Custom Stream URL</span>
+                </button>
+
+                {/* Drop Feedback */}
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    const el = document.getElementById('feedback-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Drop Feedback</span>
                 </button>
 
                 {/* Refresh Feeds */}

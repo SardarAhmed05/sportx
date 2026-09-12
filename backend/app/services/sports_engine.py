@@ -19,6 +19,69 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("sports_engine")
 
+CRICKET_TEAM_CRESTS = {
+    "england": "https://a.espncdn.com/i/teamlogos/cricket/500/1.png",
+    "australia": "https://a.espncdn.com/i/teamlogos/cricket/500/2.png",
+    "south africa": "https://a.espncdn.com/i/teamlogos/cricket/500/3.png",
+    "west indies": "https://a.espncdn.com/i/teamlogos/cricket/500/4.png",
+    "new zealand": "https://a.espncdn.com/i/teamlogos/cricket/500/5.png",
+    "india": "https://a.espncdn.com/i/teamlogos/cricket/500/6.png",
+    "pakistan": "https://a.espncdn.com/i/teamlogos/cricket/500/7.png",
+    "sri lanka": "https://a.espncdn.com/i/teamlogos/cricket/500/8.png",
+    "zimbabwe": "https://a.espncdn.com/i/teamlogos/cricket/500/9.png",
+    "united states": "https://a.espncdn.com/i/teamlogos/cricket/500/11.png",
+    "usa": "https://a.espncdn.com/i/teamlogos/cricket/500/11.png",
+    "canada": "https://a.espncdn.com/i/teamlogos/cricket/500/12.png",
+    "netherlands": "https://a.espncdn.com/i/teamlogos/cricket/500/24.png",
+    "bangladesh": "https://a.espncdn.com/i/teamlogos/cricket/500/25.png",
+    "kenya": "https://a.espncdn.com/i/teamlogos/cricket/500/26.png",
+    "united arab emirates": "https://a.espncdn.com/i/teamlogos/cricket/500/27.png",
+    "uae": "https://a.espncdn.com/i/teamlogos/cricket/500/27.png",
+    "namibia": "https://a.espncdn.com/i/teamlogos/cricket/500/28.png",
+    "ireland": "https://a.espncdn.com/i/teamlogos/cricket/500/29.png",
+    "scotland": "https://a.espncdn.com/i/teamlogos/cricket/500/30.png",
+    "nepal": "https://a.espncdn.com/i/teamlogos/cricket/500/33.png",
+    "uganda": "https://a.espncdn.com/i/teamlogos/cricket/500/35.png",
+    "oman": "https://a.espncdn.com/i/teamlogos/cricket/500/37.png",
+    "afghanistan": "https://a.espncdn.com/i/teamlogos/cricket/500/40.png",
+    "lahore qalandars": "https://a.espncdn.com/i/teamlogos/cricket/500/898.png",
+    "karachi kings": "https://a.espncdn.com/i/teamlogos/cricket/500/897.png",
+    "islamabad united": "https://a.espncdn.com/i/teamlogos/cricket/500/896.png",
+    "peshawar zalmi": "https://a.espncdn.com/i/teamlogos/cricket/500/899.png",
+    "quetta gladiators": "https://a.espncdn.com/i/teamlogos/cricket/500/900.png",
+    "multan sultans": "https://a.espncdn.com/i/teamlogos/cricket/500/1187.png",
+    "chennai super kings": "https://a.espncdn.com/i/teamlogos/cricket/500/4343.png",
+    "mumbai indians": "https://a.espncdn.com/i/teamlogos/cricket/500/4346.png",
+    "royal challengers": "https://a.espncdn.com/i/teamlogos/cricket/500/4340.png",
+    "kolkata knight riders": "https://a.espncdn.com/i/teamlogos/cricket/500/4341.png",
+    "rajasthan royals": "https://a.espncdn.com/i/teamlogos/cricket/500/4345.png",
+    "sunrisers hyderabad": "https://a.espncdn.com/i/teamlogos/cricket/500/5143.png",
+    "delhi capitals": "https://a.espncdn.com/i/teamlogos/cricket/500/4344.png",
+    "punjab kings": "https://a.espncdn.com/i/teamlogos/cricket/500/4342.png",
+    "gujarat titans": "https://a.espncdn.com/i/teamlogos/cricket/500/1298423.png",
+    "lucknow super giants": "https://a.espncdn.com/i/teamlogos/cricket/500/1298424.png"
+}
+
+def generate_svg_avatar(team_name: str) -> str:
+    """Generates a clean SVG crest with club initials if official CDN logo is missing."""
+    initials = "".join([part[0] for part in team_name.split()[:2]]).upper() if team_name else "CR"
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+        <rect width="100" height="100" rx="24" fill="#0F172A"/>
+        <text x="50" y="58" font-family="system-ui, sans-serif" font-weight="900" font-size="34" fill="#10B981" text-anchor="middle" dominant-baseline="middle">{initials}</text>
+    </svg>'''
+    import base64
+    return f"data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}"
+
+def get_cricket_team_logo(team_name: str, espn_logo: Optional[str] = None) -> str:
+    """Finds verified high-res crest or clean SVG avatar for any cricket team."""
+    if espn_logo and "default.png" not in espn_logo and espn_logo.startswith("http") and len(espn_logo.strip()) > 15:
+        return espn_logo
+    t_clean = (team_name or "").lower().strip()
+    for k, v in CRICKET_TEAM_CRESTS.items():
+        if k in t_clean or t_clean in k:
+            return v
+    return generate_svg_avatar(team_name)
+
 SPORTS_CONFIGS = {
     "cricket": {
         "name": "Cricket",
@@ -38,48 +101,6 @@ SPORTS_CONFIGS = {
             {"id": "cric-srv-4", "label": "Server 4: Direct 1080p Stream", "network": "beIN Sports", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Direct Video"}
         ]
     },
-    "basketball": {
-        "name": "Basketball",
-        "sport_code": "basketball",
-        "leagues": [
-            {"id": "nba", "name": "NBA", "code": "nba", "short_code": "NBA"},
-            {"id": "wnba", "name": "WNBA", "code": "wnba", "short_code": "WNBA"},
-            {"id": "ncaa_mbb", "name": "NCAA Men's Basketball", "code": "mens-college-basketball", "short_code": "NCAA"}
-        ],
-        "default_broadcasters": [
-            {"id": "bball-srv-1", "label": "Server 1: NBA TV HD (Official Live)", "network": "NBA TV", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/nba-tv", "is_embed": True, "coverage": "Official NBA Broadcast Feed"},
-            {"id": "bball-srv-2", "label": "Server 2: ESPN Basketball Live", "network": "ESPN HD", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "USA Prime Matchday"},
-            {"id": "bball-srv-3", "label": "Server 3: TNT Sports Basketball", "network": "TNT Sports", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Primetime European Broadcast"},
-            {"id": "bball-srv-4", "label": "Server 4: Direct 1080p Stream", "network": "beIN Sports", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Direct Video"}
-        ]
-    },
-    "nfl": {
-        "name": "American Football",
-        "sport_code": "football",
-        "leagues": [
-            {"id": "nfl", "name": "NFL", "code": "nfl", "short_code": "NFL"},
-            {"id": "cfb", "name": "College Football", "code": "college-football", "short_code": "CFB"}
-        ],
-        "default_broadcasters": [
-            {"id": "nfl-srv-1", "label": "Server 1: NFL Network HD (Official Live)", "network": "NFL Network", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/nfl-network", "is_embed": True, "coverage": "Official NFL Game Pass Feed"},
-            {"id": "nfl-srv-2", "label": "Server 2: ESPN Sunday Night Football", "network": "ESPN / ABC", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "National Game Broadcast"},
-            {"id": "nfl-srv-3", "label": "Server 3: Sky Sports NFL Live", "network": "Sky Sports NFL", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "International Broadcast"},
-            {"id": "nfl-srv-4", "label": "Server 4: Direct 1080p Video", "network": "beIN XTRA", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Direct Video"}
-        ]
-    },
-    "motorsport": {
-        "name": "Motorsport",
-        "sport_code": "racing",
-        "leagues": [
-            {"id": "f1", "name": "Formula 1", "code": "f1", "short_code": "F1"}
-        ],
-        "default_broadcasters": [
-            {"id": "f1-srv-1", "label": "Server 1: Sky Sports F1 HD (Official Live)", "network": "Sky Sports F1", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "Full Weekend Trackside Live"},
-            {"id": "f1-srv-2", "label": "Server 2: F1 TV Live International Feed", "network": "F1 TV Pro", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Cockpit & Pitlane Radio"},
-            {"id": "f1-srv-3", "label": "Server 3: Canal+ Sport Formule 1", "network": "CANAL+ F1", "quality": "1080p HD", "language": "International", "url": "https://epiembeds.online/embed/canalsport-pl", "is_embed": True, "coverage": "European Paddock Live"},
-            {"id": "f1-srv-4", "label": "Server 4: Direct HLS Video Feed", "network": "Motorsport Vault", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Direct Video Stream"}
-        ]
-    },
     "tennis": {
         "name": "Tennis",
         "sport_code": "tennis",
@@ -93,32 +114,6 @@ SPORTS_CONFIGS = {
             {"id": "ten-srv-3", "label": "Server 3: Sky Sports Tennis HD", "network": "Sky Sports Tennis", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "ATP / WTA Tour Live"},
             {"id": "ten-srv-4", "label": "Server 4: Direct 1080p Video Feed", "network": "beIN Sports Tennis", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Direct Video Feed"}
         ]
-    },
-    "combat": {
-        "name": "Combat Sports",
-        "sport_code": "mma",
-        "leagues": [
-            {"id": "ufc", "name": "UFC", "code": "ufc", "short_code": "UFC"}
-        ],
-        "default_broadcasters": [
-            {"id": "mma-srv-1", "label": "Server 1: UFC Fight Pass HD (Main Card)", "network": "UFC Fight Pass", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Octagon Main Event Live"},
-            {"id": "mma-srv-2", "label": "Server 2: ESPN+ Pay-Per-View Feed", "network": "ESPN+ PPV", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "Championship Fights Live"},
-            {"id": "mma-srv-3", "label": "Server 3: TNT Sports Box Office HD", "network": "TNT Box Office", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "Undercard & Prelims"},
-            {"id": "mma-srv-4", "label": "Server 4: Direct Video Feed", "network": "Combat Vault", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Direct Video"}
-        ]
-    },
-    "baseball": {
-        "name": "Baseball",
-        "sport_code": "baseball",
-        "leagues": [
-            {"id": "mlb", "name": "MLB", "code": "mlb", "short_code": "MLB"}
-        ],
-        "default_broadcasters": [
-            {"id": "mlb-srv-1", "label": "Server 1: MLB Network HD (Live Ballpark)", "network": "MLB Network", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "Official Ballpark World Feed"},
-            {"id": "mlb-srv-2", "label": "Server 2: ESPN Sunday Night Baseball", "network": "ESPN MLB", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Primetime National Game"},
-            {"id": "mlb-srv-3", "label": "Server 3: Fox Sports MLB Live", "network": "Fox Sports HD", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "Interleague Game Live"},
-            {"id": "mlb-srv-4", "label": "Server 4: Direct HLS Stream", "network": "beIN Baseball", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Stream"}
-        ]
     }
 }
 
@@ -130,7 +125,7 @@ class UniversalSportsEngine:
 
     async def fetch_sport_matches(self, sport: str) -> List[Dict[str, Any]]:
         """Fetches live fixtures and scoreboards from ESPN for the specified sport."""
-        s_key = (sport or "basketball").lower().strip()
+        s_key = (sport or "cricket").lower().strip()
         if s_key not in SPORTS_CONFIGS:
             return []
 
@@ -184,8 +179,8 @@ class UniversalSportsEngine:
                                     a_name = a.get("displayName", "Team B")
                                     h_score = h.get("score") or ""
                                     a_score = a.get("score") or ""
-                                    h_logo = h.get("logo") or "https://a.espncdn.com/i/teamlogos/cricket/500/default.png"
-                                    a_logo = a.get("logo") or "https://a.espncdn.com/i/teamlogos/cricket/500/default.png"
+                                    h_logo = get_cricket_team_logo(h_name, h.get("logo"))
+                                    a_logo = get_cricket_team_logo(a_name, a.get("logo"))
                                     
                                     matches.append({
                                         "id": f"cric-{e.get('id', len(matches))}",
@@ -266,8 +261,8 @@ class UniversalSportsEngine:
                             home_name = home.get("team", {}).get("displayName", "Home Team")
                             away_name = away.get("team", {}).get("displayName", "Away Team")
                             
-                            home_logo = home.get("team", {}).get("logo") or "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/tor.png"
-                            away_logo = away.get("team", {}).get("logo") or "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/mia.png"
+                            home_logo = home.get("team", {}).get("logo") or generate_svg_avatar(home_name)
+                            away_logo = away.get("team", {}).get("logo") or generate_svg_avatar(away_name)
                             
                             home_score = int(home.get("score") or 0)
                             away_score = int(away.get("score") or 0)
@@ -408,11 +403,11 @@ class UniversalSportsEngine:
         return self.sport_caches.get(s_key, [])
 
     def get_sport_config(self, sport: str) -> Dict[str, Any]:
-        s_key = (sport or "basketball").lower().strip()
-        return SPORTS_CONFIGS.get(s_key, SPORTS_CONFIGS.get("basketball", {}))
+        s_key = (sport or "cricket").lower().strip()
+        return SPORTS_CONFIGS.get(s_key, SPORTS_CONFIGS.get("cricket", {}))
 
     async def get_live_sports_matches(self, sport: str, league_filter: str = None, status_filter: str = None) -> Dict[str, Any]:
-        s_key = (sport or "basketball").lower().strip()
+        s_key = (sport or "cricket").lower().strip()
         all_matches = await self.fetch_sport_matches(s_key)
         filtered = list(all_matches)
         
@@ -454,7 +449,7 @@ class UniversalSportsEngine:
 
     async def get_live_sync_data(self, sport: str) -> Dict[str, Any]:
         """Ultra-fast live sync: returns real-time match minutes, clocks, and scores for any sport."""
-        s_key = (sport or "basketball").lower().strip()
+        s_key = (sport or "cricket").lower().strip()
         all_matches = await self.fetch_sport_matches(s_key)
         live_matches = [
             {
@@ -484,7 +479,7 @@ class UniversalSportsEngine:
 
     async def get_overview(self, sport: str) -> Dict[str, Any]:
         """Returns overview for the specified sport with marquee match and total counts."""
-        s_key = (sport or "basketball").lower().strip()
+        s_key = (sport or "cricket").lower().strip()
         matches = await self.fetch_sport_matches(s_key)
         cfg = self.get_sport_config(s_key)
         

@@ -178,7 +178,7 @@ export default function MidTopTabs({
               className={`w-full flex items-center justify-between gap-2.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold border transition-all duration-200 cursor-pointer select-none shadow-2xs ${
                 isStatusOpen 
                   ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white shadow-md' 
-                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:shadow-md hover:shadow-emerald-500/5'
+                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
               <div className="flex items-center gap-2 truncate">
@@ -217,7 +217,7 @@ export default function MidTopTabs({
                       className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer select-none ${
                         isSelected
                           ? (item.isLive ? 'bg-red-500 text-white font-black shadow-xs' : 'bg-emerald-600 text-white font-black shadow-xs')
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
@@ -251,7 +251,7 @@ export default function MidTopTabs({
               className={`w-full flex items-center justify-between gap-2.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold border transition-all duration-200 cursor-pointer select-none shadow-2xs ${
                 isLeagueOpen 
                   ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white shadow-md' 
-                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:shadow-md hover:shadow-emerald-500/5'
+                  : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
               <div className="flex items-center gap-2 truncate">
@@ -281,7 +281,7 @@ export default function MidTopTabs({
                       className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer select-none ${
                         isSelected
                           ? 'bg-emerald-600 text-white font-black shadow-xs'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400'
                       }`}
                     >
                       <span className="truncate">{l.label}</span>

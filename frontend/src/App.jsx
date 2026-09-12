@@ -105,10 +105,21 @@ export default function App() {
   const [selectedStatus, setSelectedStatus] = useState('all'); // 'all', 'live', 'upcoming', 'finished'
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Data State with Instant Cache Hydration (Site appears directly with 0ms delay)
+  // Cache TTL: only use localStorage cache if it's less than 5 minutes old
+  const CACHE_TTL_MS = 5 * 60 * 1000;
+  const isCacheFresh = (sport) => {
+    try {
+      const ts = localStorage.getItem(`sportx_cached_at_${sport}`);
+      if (!ts) return false;
+      return (Date.now() - parseInt(ts, 10)) < CACHE_TTL_MS;
+    } catch { return false; }
+  };
+
+  // Data State with Instant Cache Hydration (only if cache is fresh < 5 min)
   const [overview, setOverview] = useState(() => {
     try {
       const initialSport = localStorage.getItem('sportx_active_sport') || 'football';
+      if (!isCacheFresh(initialSport)) return null;
       const c = localStorage.getItem(`sportx_cached_overview_${initialSport}`) || localStorage.getItem('sportx_cached_overview');
       return c ? JSON.parse(c) : null;
     } catch { return null; }
@@ -116,6 +127,7 @@ export default function App() {
   const [footballMatches, setFootballMatches] = useState(() => {
     try {
       const initialSport = localStorage.getItem('sportx_active_sport') || 'football';
+      if (!isCacheFresh(initialSport)) return [];
       const c = localStorage.getItem(`sportx_cached_matches_${initialSport}`) || localStorage.getItem('sportx_cached_matches');
       return c ? JSON.parse(c) : [];
     } catch { return []; }
@@ -123,6 +135,7 @@ export default function App() {
   const [replays, setReplays] = useState(() => {
     try {
       const initialSport = localStorage.getItem('sportx_active_sport') || 'football';
+      if (!isCacheFresh(initialSport)) return [];
       const c = localStorage.getItem(`sportx_cached_replays_${initialSport}`) || localStorage.getItem('sportx_cached_replays');
       return c ? JSON.parse(c) : [];
     } catch { return []; }
@@ -131,6 +144,7 @@ export default function App() {
   const [channels, setChannels] = useState(() => {
     try {
       const initialSport = localStorage.getItem('sportx_active_sport') || 'football';
+      if (!isCacheFresh(initialSport)) return [];
       const c = localStorage.getItem(`sportx_cached_channels_${initialSport}`) || localStorage.getItem('sportx_cached_channels');
       return c ? JSON.parse(c) : [];
     } catch { return []; }
@@ -138,18 +152,13 @@ export default function App() {
   const [categories, setCategories] = useState([]);
   const [countries, setCountries] = useState([]);
   
-  // If we already have cached data in localStorage, don't show full-page blocking screen!
+  // Show loading spinner if no fresh cache exists
   const [loading, setLoading] = useState(() => {
     try {
       const initialSport = localStorage.getItem('sportx_active_sport') || 'football';
-      const hasCached = Boolean(
-        localStorage.getItem(`sportx_cached_matches_${initialSport}`) || 
-        localStorage.getItem('sportx_cached_matches') || 
-        localStorage.getItem(`sportx_cached_channels_${initialSport}`)
-      );
-      return !hasCached;
+      return !isCacheFresh(initialSport);
     } catch {
-      return false;
+      return true;
     }
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -251,6 +260,8 @@ export default function App() {
         if (matchesList.length) localStorage.setItem(`sportx_cached_matches_${targetSport}`, JSON.stringify(matchesList));
         if (repList?.length) localStorage.setItem(`sportx_cached_replays_${targetSport}`, JSON.stringify(repList));
         if (chList?.length) localStorage.setItem(`sportx_cached_channels_${targetSport}`, JSON.stringify(chList));
+        // Write timestamp so TTL check knows when this cache was saved
+        localStorage.setItem(`sportx_cached_at_${targetSport}`, String(Date.now()));
 
         if (targetSport === 'football') {
           if (overviewData) localStorage.setItem('sportx_cached_overview', JSON.stringify(overviewData));

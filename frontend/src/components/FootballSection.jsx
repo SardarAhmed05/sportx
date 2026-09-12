@@ -54,10 +54,58 @@ export default function FootballSection({
     return true;
   });
 
+  // Popularity scoring: top teams and top leagues float to the top within each status tier
+  const TOP_LEAGUES = {
+    'champions league': 100, 'ucl': 100,
+    'premier league': 95, 'epl': 95,
+    'la liga': 90, 'bundesliga': 85, 'serie a': 85, 'ligue 1': 80,
+    'europa league': 75, 'fa cup': 65, 'carabao cup': 60,
+    'world cup': 100, 'euros': 90, 'copa america': 85,
+    'nations league': 70, 'conference league': 65,
+    'ipl': 90, 'psl': 85, 'big bash': 75, 'test': 80,
+    'wimbledon': 90, 'us open': 85, 'french open': 85, 'australian open': 85,
+  };
+
+  const TOP_TEAMS = {
+    'manchester city': 95, 'man city': 95,
+    'real madrid': 95, 'barcelona': 93, 'atletico madrid': 80,
+    'manchester united': 88, 'man utd': 88, 'man united': 88,
+    'liverpool': 90, 'arsenal': 85, 'chelsea': 84, 'tottenham': 80, 'spurs': 80,
+    'bayern munich': 90, 'borussia dortmund': 82, 'bvb': 82,
+    'juventus': 85, 'inter milan': 84, 'ac milan': 83, 'napoli': 78,
+    'psg': 88, 'paris saint-germain': 88,
+    'ajax': 75, 'benfica': 74, 'porto': 74, 'celtic': 70,
+    'india': 90, 'pakistan': 85, 'australia': 82, 'england': 80,
+    'south africa': 75, 'new zealand': 74, 'west indies': 72,
+    'novak djokovic': 90, 'carlos alcaraz': 88, 'jannik sinner': 85,
+    'iga swiatek': 88, 'aryna sabalenka': 85,
+  };
+
+  const getPopularityScore = (match) => {
+    let score = 0;
+    const league = (match.league || match.competition || '').toLowerCase();
+    const homeTeam = (match.home_team?.name || '').toLowerCase();
+    const awayTeam = (match.away_team?.name || '').toLowerCase();
+
+    // League score
+    for (const [key, val] of Object.entries(TOP_LEAGUES)) {
+      if (league.includes(key)) { score = Math.max(score, val); break; }
+    }
+    // Team score (take highest of both teams)
+    for (const [key, val] of Object.entries(TOP_TEAMS)) {
+      if (homeTeam.includes(key) || awayTeam.includes(key)) {
+        score = Math.max(score, val);
+      }
+    }
+    // Viewer count as tiebreaker
+    score += (match.viewers_count || 0) * 0.001;
+    return score;
+  };
+
   // 2. Sort matches:
-  // - LIVE matches first (with Premier League live matches strictly prioritized first)
-  // - Then UPCOMING matches
-  // - Then FINISHED matches (descending, most recent first)
+  // - LIVE first (popular LIVE matches within LIVE tier)
+  // - Then UPCOMING (popular upcoming matches first)
+  // - Then FINISHED (most recent first)
   const sortedMatches = [...filteredMatches].sort((a, b) => {
     const isLiveA = a.status === 'LIVE';
     const isLiveB = b.status === 'LIVE';
@@ -65,13 +113,9 @@ export default function FootballSection({
     if (isLiveA && !isLiveB) return -1;
     if (!isLiveA && isLiveB) return 1;
 
-    // If both are LIVE: Premier League live matches first
     if (isLiveA && isLiveB) {
-      const isEplA = a.league_id === 'epl' || (a.league || '').toLowerCase().includes('premier');
-      const isEplB = b.league_id === 'epl' || (b.league || '').toLowerCase().includes('premier');
-      if (isEplA && !isEplB) return -1;
-      if (!isEplA && isEplB) return 1;
-      return (b.viewers_count || 0) - (a.viewers_count || 0);
+      // Within LIVE: popular matches first
+      return getPopularityScore(b) - getPopularityScore(a);
     }
 
     const isUpcomingA = a.status === 'UPCOMING' || a.status === 'SCHEDULED';
@@ -80,14 +124,20 @@ export default function FootballSection({
     if (isUpcomingA && !isUpcomingB) return -1;
     if (!isUpcomingA && isUpcomingB) return 1;
 
-    // If both are finished: most recent first
-    if (!isUpcomingA && !isUpcomingB) {
-      const timeA = a.raw_date ? new Date(a.raw_date).getTime() : 0;
-      const timeB = b.raw_date ? new Date(b.raw_date).getTime() : 0;
-      return timeB - timeA;
+    if (isUpcomingA && isUpcomingB) {
+      // Within UPCOMING: popular matches first
+      const popDiff = getPopularityScore(b) - getPopularityScore(a);
+      if (Math.abs(popDiff) > 1) return popDiff;
+      // Tiebreak by kickoff time (sooner first)
+      const timeA = a.raw_date ? new Date(a.raw_date).getTime() : Infinity;
+      const timeB = b.raw_date ? new Date(b.raw_date).getTime() : Infinity;
+      return timeA - timeB;
     }
 
-    return 0;
+    // Both finished: most recent first
+    const timeA = a.raw_date ? new Date(a.raw_date).getTime() : 0;
+    const timeB = b.raw_date ? new Date(b.raw_date).getTime() : 0;
+    return timeB - timeA;
   });
 
   // 3. 15 Matches Per Page Pagination Slicing

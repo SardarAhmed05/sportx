@@ -23,13 +23,54 @@ export default function HeroPoster({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Filter top featured matches (prioritize LIVE first, then marquee UPCOMING, then recent FINISHED)
+  // Popularity scoring - mirrors FootballSection priority logic
+  const TOP_LEAGUES_HERO = {
+    'champions league': 100, 'ucl': 100,
+    'premier league': 95, 'epl': 95,
+    'la liga': 90, 'bundesliga': 85, 'serie a': 85, 'ligue 1': 80,
+    'europa league': 75, 'world cup': 100, 'euros': 90, 'copa america': 85,
+    'nations league': 70, 'ipl': 90, 'psl': 85, 'test': 80,
+    'wimbledon': 90, 'us open': 85, 'french open': 85, 'australian open': 85,
+  };
+  const TOP_TEAMS_HERO = {
+    'manchester city': 95, 'man city': 95,
+    'real madrid': 95, 'barcelona': 93, 'atletico madrid': 80,
+    'manchester united': 88, 'man utd': 88, 'man united': 88,
+    'liverpool': 90, 'arsenal': 85, 'chelsea': 84, 'tottenham': 80,
+    'bayern munich': 90, 'borussia dortmund': 82,
+    'juventus': 85, 'inter milan': 84, 'ac milan': 83, 'napoli': 78,
+    'psg': 88, 'paris saint-germain': 88,
+    'india': 90, 'pakistan': 85, 'australia': 82, 'england': 80,
+  };
+  const getHeroScore = (m) => {
+    let score = 0;
+    const league = (m.league || m.competition || '').toLowerCase();
+    const home = (m.home_team?.name || '').toLowerCase();
+    const away = (m.away_team?.name || '').toLowerCase();
+    for (const [k, v] of Object.entries(TOP_LEAGUES_HERO)) {
+      if (league.includes(k)) { score = Math.max(score, v); break; }
+    }
+    for (const [k, v] of Object.entries(TOP_TEAMS_HERO)) {
+      if (home.includes(k) || away.includes(k)) score = Math.max(score, v);
+    }
+    score += (m.viewers_count || 0) * 0.001;
+    return score;
+  };
+
+  // Filter top featured matches: LIVE first, then UPCOMING, then FINISHED — all sorted by popularity within tier
   const featuredMatches = matches.length > 0
     ? [...matches].sort((a, b) => {
-        if (a.status === 'LIVE' && b.status !== 'LIVE') return -1;
-        if (b.status === 'LIVE' && a.status !== 'LIVE') return 1;
-        if (a.status === 'UPCOMING' && b.status === 'FINISHED') return -1;
-        if (b.status === 'UPCOMING' && a.status === 'FINISHED') return 1;
+        const isLiveA = a.status === 'LIVE', isLiveB = b.status === 'LIVE';
+        if (isLiveA && !isLiveB) return -1;
+        if (!isLiveA && isLiveB) return 1;
+        if (isLiveA && isLiveB) return getHeroScore(b) - getHeroScore(a);
+
+        const isUpA = a.status === 'UPCOMING' || a.status === 'SCHEDULED';
+        const isUpB = b.status === 'UPCOMING' || b.status === 'SCHEDULED';
+        if (isUpA && !isUpB) return -1;
+        if (!isUpA && isUpB) return 1;
+        if (isUpA && isUpB) return getHeroScore(b) - getHeroScore(a);
+
         return (b.viewers_count || 0) - (a.viewers_count || 0);
       }).slice(0, 8)
     : [];

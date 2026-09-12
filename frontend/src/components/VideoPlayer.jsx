@@ -822,7 +822,6 @@ export default function VideoPlayer({
             title={matchTitle}
             className="w-full h-full border-0 relative z-1"
             referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-encrypted-media"
             allow="accelerometer; autoplay *; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen *"
             allowFullScreen
             onLoad={() => setIsIframeLoading(false)}

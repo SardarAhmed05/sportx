@@ -288,49 +288,6 @@ export default function VideoPlayer({
     setIsIframeLoading(true);
   }, [activeStreamUrl]);
 
-  // Keep a stable ref to the latest triggerAutoFailover so the timeout can call it
-  // without needing it as an effect dependency (avoids re-running timer on every streams update)
-  const triggerAutoFailoverRef = useRef(triggerAutoFailover);
-  useEffect(() => {
-    triggerAutoFailoverRef.current = triggerAutoFailover;
-  }, [triggerAutoFailover]);
-
-  // Auto-failover timeout: if embed iframe hasn't loaded within 12s, switch to next server.
-  // Only re-runs when the actual URL or server index changes — NOT on streams/failover updates.
-  useEffect(() => {
-    if (!isEmbedStream || !activeStreamUrl) return;
-
-    iframeLoadedRef.current = false;
-    setIsIframeLoading(true);
-
-    const timeoutId = setTimeout(() => {
-      if (!iframeLoadedRef.current) {
-        console.warn(`Server ${selectedServerIndex + 1} timed out after 12s, triggering auto-failover`);
-        triggerAutoFailoverRef.current(selectedServerIndex);
-      }
-    }, 12000);
-
-    return () => clearTimeout(timeoutId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStreamUrl, isEmbedStream, selectedServerIndex]);
-
-  useEffect(() => {
-    if (!streams.length) return;
-    streams.forEach((s) => {
-      if (!s.url || s.is_embed) return;
-      checkStreamHealth(s.url)
-        .then(health => {
-          if (health) {
-            setServerHealthMap(prev => ({
-              ...prev,
-              [s.id || s.url]: health
-            }));
-          }
-        })
-        .catch(() => {});
-    });
-  }, [streamItem?.data?.id]);
-
   // Automatic failover handler (finds next working server in rotation)
   const triggerAutoFailover = useCallback((currentIdx) => {
     if (!streams.length || streams.length <= 1) {
@@ -373,6 +330,51 @@ export default function VideoPlayer({
       return updated;
     });
   }, [streams, isFinished]);
+
+  // Keep a stable ref to the latest triggerAutoFailover so the timeout can call it
+  // without needing it as an effect dependency (avoids re-running timer on every streams update)
+  const triggerAutoFailoverRef = useRef(triggerAutoFailover);
+  useEffect(() => {
+    triggerAutoFailoverRef.current = triggerAutoFailover;
+  }, [triggerAutoFailover]);
+
+  // Auto-failover timeout: if embed iframe hasn't loaded within 15s and there are alternative servers, switch to next server.
+  // Only re-runs when the actual URL or server index changes — NOT on streams/failover updates.
+  useEffect(() => {
+    if (!isEmbedStream || !activeStreamUrl || streams.length <= 1) return;
+
+    iframeLoadedRef.current = false;
+    setIsIframeLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      if (!iframeLoadedRef.current) {
+        console.warn(`Server ${selectedServerIndex + 1} timed out after 15s, triggering auto-failover`);
+        if (triggerAutoFailoverRef.current) {
+          triggerAutoFailoverRef.current(selectedServerIndex);
+        }
+      }
+    }, 15000);
+
+    return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStreamUrl, isEmbedStream, selectedServerIndex, streams.length]);
+
+  useEffect(() => {
+    if (!streams.length) return;
+    streams.forEach((s) => {
+      if (!s.url || s.is_embed) return;
+      checkStreamHealth(s.url)
+        .then(health => {
+          if (health) {
+            setServerHealthMap(prev => ({
+              ...prev,
+              [s.id || s.url]: health
+            }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [streamItem?.data?.id]);
 
   // Listen for iframe postMessage error events (YouTube Iframe API & Dailymotion error events)
   useEffect(() => {

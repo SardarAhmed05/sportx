@@ -11,6 +11,7 @@ import FootballReplaysSection from './components/FootballReplaysSection';
 import MatchStatsModal from './components/MatchStatsModal';
 import CustomStreamModal from './components/CustomStreamModal';
 import FeedbackSection from './components/FeedbackSection';
+import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 
 import { 
@@ -621,13 +622,15 @@ export default function App() {
           <>
             {/* Active Cinema Video Player (if user launched a stream) */}
             {activeStream && (
-              <VideoPlayer
-                streamItem={activeStream}
-                onClose={() => setActiveStream(null)}
-                isFavorite={isItemFavorite(activeStream)}
-                onToggleFavorite={toggleFavorite}
-                onSwitchToMultiView={handleSwitchToMultiView}
-              />
+              <ErrorBoundary onClose={() => setActiveStream(null)}>
+                <VideoPlayer
+                  streamItem={activeStream}
+                  onClose={() => setActiveStream(null)}
+                  isFavorite={isItemFavorite(activeStream)}
+                  onToggleFavorite={toggleFavorite}
+                  onSwitchToMultiView={handleSwitchToMultiView}
+                />
+              </ErrorBoundary>
             )}
 
             {/* 3. FIRST PAGE BIG POSTER (Marquee Live / Upcoming Match Showcase) */}

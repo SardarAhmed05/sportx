@@ -302,175 +302,45 @@ def get_broadcasters_for_football(league_id: str, home_name: str, away_name: str
         MATCH_REPLAY_SERVERS_CACHE[key] = replay_servers
         return replay_servers
         
-    # Broadcast servers for live and upcoming games
-    if lid == "epl":
-        return [
-            {
-                "id": f"epl-sky-{home_name[:3]}",
-                "label": "Server 1: Sky Sports Premier League HD",
-                "network": "Sky Sports UK",
-                "quality": "1080p 60fps",
-                "language": "English (UK)",
-                "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-                "is_embed": True,
-                "is_primary": True,
-                "is_replay": False,
-                "coverage": f"Official Sky Broadcast: {home_name} vs {away_name}"
-            },
-            {
-                "id": f"epl-tnt-{home_name[:3]}",
-                "label": "Server 2: TNT Sports 1 HD",
-                "network": "TNT Sports",
-                "quality": "1080p HD",
-                "language": "English (UK)",
-                "url": "https://epiembeds.online/embed/tntsports1-uk",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "Premier League Matchday Live"
-            },
-            {
-                "id": f"epl-espn-{home_name[:3]}",
-                "label": "Server 3: NBC Sports / USA Network",
-                "network": "NBC / ESPN",
-                "quality": "1080p HD",
-                "language": "English (US)",
-                "url": "https://epiembeds.online/embed/espn-usa",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "USA Official Broadcast"
-            },
-            {
-                "id": f"epl-hls-{home_name[:3]}",
-                "label": "Server 4: Direct 1080p HLS Stream",
-                "network": "beIN XTRA",
-                "quality": "1080p 60fps",
-                "language": "English (Int)",
-                "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-                "is_embed": False,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "High Bandwidth Direct Video"
-            }
-        ]
-    elif lid in ["ucl", "uel"]:
-        return [
-            {
-                "id": f"ucl-tnt-{home_name[:3]}",
-                "label": "Server 1: TNT Sports 1 (UCL Main Event)",
-                "network": "TNT Sports UK",
-                "quality": "1080p 60fps",
-                "language": "English (UK)",
-                "url": "https://epiembeds.online/embed/tntsports1-uk",
-                "is_embed": True,
-                "is_primary": True,
-                "is_replay": False,
-                "coverage": f"UEFA Champions League: {home_name} vs {away_name}"
-            },
-            {
-                "id": f"ucl-sky-{home_name[:3]}",
-                "label": "Server 2: Sky Sports Football HD",
-                "network": "Sky Sports UK",
-                "quality": "1080p HD",
-                "language": "English (UK)",
-                "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "European Night Live"
-            },
-            {
-                "id": f"ucl-hls-{home_name[:3]}",
-                "label": "Server 3: Direct HLS Stream",
-                "network": "beIN XTRA",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-                "is_embed": False,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "Direct Video Feed"
-            }
-        ]
-    elif lid == "laliga":
-        return [
-            {
-                "id": f"laliga-dazn-{home_name[:3]}",
-                "label": "Server 1: DAZN La Liga HD",
-                "network": "DAZN Spain",
-                "quality": "1080p 60fps",
-                "language": "Spanish",
-                "url": "https://epiembeds.online/embed/dazn1-de",
-                "is_embed": True,
-                "is_primary": True,
-                "is_replay": False,
-                "coverage": f"La Liga EA Sports: {home_name} vs {away_name}"
-            },
-            {
-                "id": f"laliga-espn-{home_name[:3]}",
-                "label": "Server 2: ESPN+ La Liga Live",
-                "network": "ESPN+ USA",
-                "quality": "1080p HD",
-                "language": "English (US)",
-                "url": "https://epiembeds.online/embed/espn-usa",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "Official US Broadcast"
-            },
-            {
-                "id": f"laliga-hls-{home_name[:3]}",
-                "label": "Server 3: Direct 1080p Stream",
-                "network": "beIN XTRA",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-                "is_embed": False,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "Direct Stream"
-            }
-        ]
-    else:
-        return [
-            {
-                "id": f"fb-srv-1-{home_name[:3]}",
-                "label": "Server 1: Sky Sports HD Feed",
-                "network": "Sky Sports UK",
-                "quality": "1080p 60fps",
-                "language": "English",
-                "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-                "is_embed": True,
-                "is_primary": True,
-                "is_replay": False,
-                "coverage": f"Live Football: {home_name} vs {away_name}"
-            },
-            {
-                "id": f"fb-srv-2-{home_name[:3]}",
-                "label": "Server 2: TNT Sports Live",
-                "network": "TNT Sports",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://epiembeds.online/embed/tntsports1-uk",
-                "is_embed": True,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "European Broadcast"
-            },
-            {
-                "id": f"fb-srv-3-{home_name[:3]}",
-                "label": "Server 3: Direct HLS Stream",
-                "network": "beIN XTRA",
-                "quality": "1080p HD",
-                "language": "English",
-                "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-                "is_embed": False,
-                "is_primary": False,
-                "is_replay": False,
-                "coverage": "Global Direct Video Feed"
-            }
-        ]
+    # Broadcast servers for live and upcoming games (Verified working active feeds)
+    return [
+        {
+            "id": f"fb-bein-{home_name[:3]}",
+            "label": "Server 1: Direct 1080p Stream (beIN Sports XTRA)",
+            "network": "beIN Sports XTRA",
+            "quality": "1080p 60fps",
+            "language": "English (Official)",
+            "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "is_primary": True,
+            "is_replay": False,
+            "coverage": f"Official Matchday Broadcast: {home_name} vs {away_name}"
+        },
+        {
+            "id": f"fb-aspor-{home_name[:3]}",
+            "label": "Server 2: A Spor HD International",
+            "network": "A Spor HD",
+            "quality": "1080p HD",
+            "language": "International",
+            "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8",
+            "is_embed": False,
+            "is_primary": False,
+            "is_replay": False,
+            "coverage": f"European Matchday Live: {home_name} vs {away_name}"
+        },
+        {
+            "id": f"fb-accdn-{home_name[:3]}",
+            "label": "Server 3: ACCDN Sports HD Live",
+            "network": "ACCDN Sports",
+            "quality": "1080p HD",
+            "language": "English",
+            "url": "https://raycom-accdn-firetv.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "is_primary": False,
+            "is_replay": False,
+            "coverage": "High Bandwidth Direct Video"
+        }
+    ]
 
 def team_tokens(name: str) -> set:
     """Extracts meaningful word tokens from team name for fuzzy matching."""

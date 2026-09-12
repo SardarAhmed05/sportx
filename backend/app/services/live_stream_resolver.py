@@ -10,55 +10,64 @@ logger = logging.getLogger("live_stream_resolver")
 VERIFIED_BACKUP_FEEDS = {
     "football": [
         {
-            "network": "Sky Sports Premier League HD",
+            "network": "beIN Sports XTRA HD",
             "quality": "1080p 60fps",
-            "language": "English (UK)",
-            "url": "https://epiembeds.online/embed/sky-sports-premier-league",
-            "coverage": "Live Sports Broadcast"
+            "language": "English (Official)",
+            "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "coverage": "24/7 Official Live Sports Broadcast"
         },
         {
-            "network": "TNT Sports 1 HD",
+            "network": "A Spor HD International",
             "quality": "1080p HD",
-            "language": "English (UK)",
-            "url": "https://epiembeds.online/embed/tntsports1-uk",
-            "coverage": "Primetime European Sports"
+            "language": "International",
+            "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8",
+            "is_embed": False,
+            "coverage": "Live European Sports Broadcast"
         },
         {
-            "network": "NBC Sports / USA Network",
-            "quality": "1080p HD",
-            "language": "English (USA)",
-            "url": "https://epiembeds.online/embed/espn-usa",
-            "coverage": "Live Matchday Coverage"
-        },
-        {
-            "network": "Direct 1080p Stream",
+            "network": "ACCDN Sports HD",
             "quality": "1080p HD",
             "language": "English",
-            "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
-            "coverage": "High Bandwidth Direct Video"
+            "url": "https://raycom-accdn-firetv.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "coverage": "Live Matchday Coverage"
         }
     ],
-    "basketball": [
+    "cricket": [
         {
-            "network": "NBA TV HD",
+            "network": "beIN Sports Live",
             "quality": "1080p 60fps",
             "language": "English",
-            "url": "https://epiembeds.online/embed/nba-tv",
-            "coverage": "Official NBA Live"
+            "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "coverage": "Official International Sports"
         },
         {
-            "network": "ESPN Basketball Live",
+            "network": "A Spor HD",
             "quality": "1080p HD",
+            "language": "International",
+            "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8",
+            "is_embed": False,
+            "coverage": "Global Live Sports Feed"
+        }
+    ],
+    "tennis": [
+        {
+            "network": "beIN Sports XTRA",
+            "quality": "1080p 60fps",
             "language": "English",
-            "url": "https://epiembeds.online/embed/espn-usa",
-            "coverage": "USA Prime Matchday"
+            "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
+            "is_embed": False,
+            "coverage": "Center Court & International Sports"
         },
         {
-            "network": "TNT Sports Basketball",
+            "network": "A Spor HD",
             "quality": "1080p HD",
-            "language": "English",
-            "url": "https://epiembeds.online/embed/tntsports1-uk",
-            "coverage": "Primetime European Broadcast"
+            "language": "International",
+            "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8",
+            "is_embed": False,
+            "coverage": "Live Tournament Feed"
         }
     ]
 }

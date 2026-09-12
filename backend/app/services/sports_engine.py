@@ -95,10 +95,9 @@ SPORTS_CONFIGS = {
             {"id": "t20", "name": "T20 Leagues", "code": "t20", "short_code": "T20"}
         ],
         "default_broadcasters": [
-            {"id": "cric-srv-1", "label": "Server 1: Sky Sports Cricket HD (Official Live)", "network": "Sky Sports Cricket", "quality": "1080p 60fps", "language": "English (Sky UK)", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "Ball-by-Ball Live Commentary"},
-            {"id": "cric-srv-2", "label": "Server 2: Willow TV HD USA", "network": "Willow HD", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "North American Broadcast Feed"},
-            {"id": "cric-srv-3", "label": "Server 3: TNT Sports / Star Sports", "network": "Star Sports", "quality": "1080p HD", "language": "English / Hindi", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Primetime HD Broadcast"},
-            {"id": "cric-srv-4", "label": "Server 4: Direct 1080p Stream", "network": "beIN Sports", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "High Bandwidth Direct Video"}
+            {"id": "cric-srv-1", "label": "Server 1: Direct 1080p Stream (beIN Sports)", "network": "beIN Sports", "quality": "1080p 60fps", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Official 24/7 International Sports"},
+            {"id": "cric-srv-2", "label": "Server 2: A Spor HD International", "network": "A Spor HD", "quality": "1080p HD", "language": "International", "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8", "is_embed": False, "coverage": "Global Live Sports Feed"},
+            {"id": "cric-srv-3", "label": "Server 3: ACCDN Sports HD", "network": "ACCDN Sports", "quality": "1080p HD", "language": "English", "url": "https://raycom-accdn-firetv.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "North American Sports Feed"}
         ]
     },
     "tennis": {
@@ -109,10 +108,9 @@ SPORTS_CONFIGS = {
             {"id": "wta", "name": "WTA Tour", "code": "wta", "short_code": "WTA"}
         ],
         "default_broadcasters": [
-            {"id": "ten-srv-1", "label": "Server 1: Tennis Channel HD (Center Court)", "network": "Tennis Channel", "quality": "1080p 60fps", "language": "English", "url": "https://epiembeds.online/embed/espn-usa", "is_embed": True, "coverage": "Official Center Court Live"},
-            {"id": "ten-srv-2", "label": "Server 2: Eurosport 1 Tennis Live", "network": "Eurosport 1", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/tntsports1-uk", "is_embed": True, "coverage": "Grand Slam Matchday"},
-            {"id": "ten-srv-3", "label": "Server 3: Sky Sports Tennis HD", "network": "Sky Sports Tennis", "quality": "1080p HD", "language": "English", "url": "https://epiembeds.online/embed/sky-sports-premier-league", "is_embed": True, "coverage": "ATP / WTA Tour Live"},
-            {"id": "ten-srv-4", "label": "Server 4: Direct 1080p Video Feed", "network": "beIN Sports Tennis", "quality": "1080p HD", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Direct Video Feed"}
+            {"id": "ten-srv-1", "label": "Server 1: Center Court 1080p Feed", "network": "beIN Sports Tennis", "quality": "1080p 60fps", "language": "English", "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Official Center Court Live"},
+            {"id": "ten-srv-2", "label": "Server 2: A Spor HD European Feed", "network": "A Spor HD", "quality": "1080p HD", "language": "International", "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8", "is_embed": False, "coverage": "Live European Tournament Feed"},
+            {"id": "ten-srv-3", "label": "Server 3: ACCDN HD Live", "network": "ACCDN Sports", "quality": "1080p HD", "language": "English", "url": "https://raycom-accdn-firetv.amagi.tv/playlist.m3u8", "is_embed": False, "coverage": "Live Sports Broadcast"}
         ]
     }
 }

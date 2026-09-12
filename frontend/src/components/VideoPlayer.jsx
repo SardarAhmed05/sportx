@@ -288,7 +288,15 @@ export default function VideoPlayer({
     setIsIframeLoading(true);
   }, [activeStreamUrl]);
 
-  // Auto-failover timeout: if embed iframe hasn't loaded within 12s, switch to next server
+  // Keep a stable ref to the latest triggerAutoFailover so the timeout can call it
+  // without needing it as an effect dependency (avoids re-running timer on every streams update)
+  const triggerAutoFailoverRef = useRef(triggerAutoFailover);
+  useEffect(() => {
+    triggerAutoFailoverRef.current = triggerAutoFailover;
+  }, [triggerAutoFailover]);
+
+  // Auto-failover timeout: if embed iframe hasn't loaded within 12s, switch to next server.
+  // Only re-runs when the actual URL or server index changes — NOT on streams/failover updates.
   useEffect(() => {
     if (!isEmbedStream || !activeStreamUrl) return;
 
@@ -298,12 +306,13 @@ export default function VideoPlayer({
     const timeoutId = setTimeout(() => {
       if (!iframeLoadedRef.current) {
         console.warn(`Server ${selectedServerIndex + 1} timed out after 12s, triggering auto-failover`);
-        triggerAutoFailover(selectedServerIndex);
+        triggerAutoFailoverRef.current(selectedServerIndex);
       }
     }, 12000);
 
     return () => clearTimeout(timeoutId);
-  }, [activeStreamUrl, isEmbedStream, selectedServerIndex, triggerAutoFailover]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStreamUrl, isEmbedStream, selectedServerIndex]);
 
   useEffect(() => {
     if (!streams.length) return;

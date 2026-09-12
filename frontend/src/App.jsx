@@ -498,19 +498,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Intercept browser back button while a stream is open
-  useEffect(() => {
-    const handlePopState = (e) => {
-      if (activeStream) {
-        // Close the player instead of leaving the site
-        setActiveStream(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeStream]);
-
   const handleRefreshScraper = async () => {
     try {
       setIsRefreshing(true);
@@ -532,8 +519,6 @@ export default function App() {
     const normalized = (streamItem.type && streamItem.data)
       ? streamItem
       : { type: 'match', sport: currentSportName, data: streamItem };
-    // Push a history entry so the browser back button closes the player instead of leaving the site
-    window.history.pushState({ sportxStream: true }, '');
     setActiveStream(normalized);
     // Smooth scroll to video player
     window.scrollTo({ top: 0, behavior: 'smooth' });

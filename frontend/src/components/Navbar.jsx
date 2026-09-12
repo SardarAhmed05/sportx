@@ -204,29 +204,9 @@ export default function Navbar({
         </div>
 
         {/* ============================================================ */}
-        {/* RIGHT SECTION: Desktop Tools Cluster & Mobile Icon Bar       */}
+        {/* RIGHT SECTION: Desktop Actions Cluster & Mobile Icon Bar     */}
         {/* ============================================================ */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end z-10">
-          
-          {/* Desktop Search Bar (Appears on large screens lg/xl) */}
-          <div className="relative max-w-xs hidden lg:block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search matches, teams..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-32 lg:w-44 xl:w-56 pl-9 pr-8 py-1.5 bg-slate-100/90 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
 
           {/* Desktop Actions Cluster (Feedback, Saved, Custom URL, Theme Toggle, Refresh) */}
           <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
@@ -256,7 +236,21 @@ export default function Navbar({
               </span>
             </button>
 
-            {/* 3. Custom Stream URL Button */}
+            {/* 3. Desktop Search Toggle (icon only, expands drawer below) */}
+            <button
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                isMobileSearchOpen || searchQuery
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+              aria-label="Toggle Search"
+              title="Search matches and teams"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            {/* 4. Custom Stream URL Button */}
             <button
               onClick={onCustomStreamOpen}
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
@@ -266,7 +260,7 @@ export default function Navbar({
               <Plus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </button>
 
-            {/* 4. Light / Dark Theme Toggle Button */}
+            {/* 5. Light / Dark Theme Toggle Button */}
             <button
               onClick={onToggleTheme}
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer select-none"
@@ -280,7 +274,7 @@ export default function Navbar({
               )}
             </button>
 
-            {/* 5. Desktop Scraper Refresh */}
+            {/* 6. Desktop Scraper Refresh */}
             <button
               onClick={onRefreshScraper}
               disabled={isRefreshing}
@@ -296,7 +290,7 @@ export default function Navbar({
           {/* 1. Mobile Search Toggle Icon */}
           <button
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            className={`flex lg:hidden p-2 rounded-xl border transition-all cursor-pointer ${
+            className={`flex md:hidden p-2 rounded-xl border transition-all cursor-pointer ${
               isMobileSearchOpen || searchQuery
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
@@ -401,7 +395,7 @@ export default function Navbar({
       {/* MOBILE EXPANDABLE SEARCH BAR (Clean, spacious, uncluttered)   */}
       {/* ============================================================ */}
       {isMobileSearchOpen && (
-        <div className="lg:hidden px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800/80 animate-in slide-in-from-top-2 duration-150">
+        <div className="px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800/80 animate-in slide-in-from-top-2 duration-150">
           <div className="relative flex items-center">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

@@ -105,7 +105,7 @@ export default function Navbar({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between relative">
         
         {/* ============================================================ */}
-        {/* LEFT SECTION: Minimal Classic Brand Logo + Desktop Cluster  */}
+        {/* LEFT SECTION: Minimal Classic Brand Logo                     */}
         {/* ============================================================ */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 z-10">
           {/* Brand Logo (Clickable -> Returns to Home Page) */}
@@ -127,67 +127,6 @@ export default function Navbar({
               </span>
             </div>
           </button>
-
-          <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block" />
-
-          {/* Desktop Quick Actions (Theme Toggle, Custom URL & Saved) */}
-          <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
-            {/* 1. Light / Dark Theme Toggle Button */}
-            <button
-              onClick={onToggleTheme}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-all cursor-pointer select-none"
-              title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
-              aria-label="Toggle light and dark theme"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  <span className="text-[11px]">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-slate-700 fill-slate-700" />
-                  <span className="text-[11px]">Dark</span>
-                </>
-              )}
-            </button>
-
-            {/* 2. Custom Stream URL Button */}
-            <button
-              onClick={onCustomStreamOpen}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Play custom stream URL"
-            >
-              <Plus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[11px]">Custom URL</span>
-            </button>
-
-            {/* 3. Saved Favorites Button */}
-            <button
-              onClick={onOpenFavorites}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all cursor-pointer"
-              title="View Saved Favorites"
-            >
-              <Star className="w-3.5 h-3.5 fill-rose-600 text-rose-600 dark:fill-rose-400 dark:text-rose-400" />
-              <span className="text-[11px]">Saved</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-rose-200 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 text-[10px] font-black">
-                {favoritesCount}
-              </span>
-            </button>
-
-            {/* 4. Drop Feedback Button */}
-            <button
-              onClick={() => {
-                const el = document.getElementById('feedback-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Drop Community Feedback & Stream Requests"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[11px]">Feedback</span>
-            </button>
-          </div>
         </div>
 
         {/* ============================================================ */}
@@ -200,7 +139,7 @@ export default function Navbar({
             <button
               onClick={() => setIsSportOpen(!isSportOpen)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/80 text-emerald-900 dark:text-emerald-200 text-xs font-black border border-emerald-500/30 dark:border-emerald-700/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none"
-              title="Switch Sport (Cricket, Football, NBA, NFL, F1, Tennis, UFC, MLB)"
+              title="Switch Sport (Football, Cricket, Tennis)"
             >
               <ActiveSportIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="font-black tracking-tight">{currentSport.name}</span>
@@ -265,19 +204,19 @@ export default function Navbar({
         </div>
 
         {/* ============================================================ */}
-        {/* RIGHT SECTION: Desktop Search + Refresh & Mobile Icon Bar    */}
+        {/* RIGHT SECTION: Desktop Tools Cluster & Mobile Icon Bar       */}
         {/* ============================================================ */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end z-10">
           
-          {/* Desktop Search Bar */}
-          <div className="relative max-w-xs hidden md:block">
+          {/* Desktop Search Bar (Appears on large screens lg/xl) */}
+          <div className="relative max-w-xs hidden lg:block">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search matches, teams..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-48 lg:w-56 pl-9 pr-8 py-1.5 bg-slate-100/90 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 transition-all"
+              className="w-32 lg:w-44 xl:w-56 pl-9 pr-8 py-1.5 bg-slate-100/90 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 transition-all"
             />
             {searchQuery && (
               <button
@@ -289,21 +228,75 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Desktop Scraper Refresh */}
-          <button
-            onClick={onRefreshScraper}
-            disabled={isRefreshing}
-            className="hidden md:flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50"
-            title="Refresh Feeds"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
-          </button>
+          {/* Desktop Actions Cluster (Feedback, Saved, Custom URL, Theme Toggle, Refresh) */}
+          <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
+            {/* 1. Drop Community Feedback Button */}
+            <button
+              onClick={() => {
+                const el = document.getElementById('feedback-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+              title="Drop Community Feedback & Stream Requests"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-[11px] hidden xl:inline">Feedback</span>
+            </button>
+
+            {/* 2. Saved Favorites Button */}
+            <button
+              onClick={onOpenFavorites}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+              title="View Saved Favorites"
+            >
+              <Star className="w-3.5 h-3.5 fill-rose-600 text-rose-600 dark:fill-rose-400 dark:text-rose-400 shrink-0" />
+              <span className="text-[11px] hidden xl:inline">Saved</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-200 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 text-[10px] font-black">
+                {favoritesCount}
+              </span>
+            </button>
+
+            {/* 3. Custom Stream URL Button */}
+            <button
+              onClick={onCustomStreamOpen}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              title="Play Custom Stream URL"
+              aria-label="Play Custom Stream URL"
+            >
+              <Plus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </button>
+
+            {/* 4. Light / Dark Theme Toggle Button */}
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer select-none"
+              title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
+              aria-label="Toggle light and dark theme"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400 fill-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-700 fill-slate-700" />
+              )}
+            </button>
+
+            {/* 5. Desktop Scraper Refresh */}
+            <button
+              onClick={onRefreshScraper}
+              disabled={isRefreshing}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+              title="Refresh Feeds"
+              aria-label="Refresh Feeds"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
+            </button>
+          </div>
 
           {/* ---------------- MOBILE ACTION ICONS (Uncluttered) ---------------- */}
           {/* 1. Mobile Search Toggle Icon */}
           <button
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            className={`flex md:hidden p-2 rounded-xl border transition-all cursor-pointer ${
+            className={`flex lg:hidden p-2 rounded-xl border transition-all cursor-pointer ${
               isMobileSearchOpen || searchQuery
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
@@ -408,7 +401,7 @@ export default function Navbar({
       {/* MOBILE EXPANDABLE SEARCH BAR (Clean, spacious, uncluttered)   */}
       {/* ============================================================ */}
       {isMobileSearchOpen && (
-        <div className="md:hidden px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800/80 animate-in slide-in-from-top-2 duration-150">
+        <div className="lg:hidden px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800/80 animate-in slide-in-from-top-2 duration-150">
           <div className="relative flex items-center">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

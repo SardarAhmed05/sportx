@@ -38,6 +38,7 @@ export default function VideoPlayer({
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const containerRef = useRef(null);
+  const iframeLoadedRef = useRef(false); // tracks live iframe load state without stale closure issues
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -287,7 +288,23 @@ export default function VideoPlayer({
     setIsIframeLoading(true);
   }, [activeStreamUrl]);
 
-  // Background health probing for non-embed streams
+  // Auto-failover timeout: if embed iframe hasn't loaded within 12s, switch to next server
+  useEffect(() => {
+    if (!isEmbedStream || !activeStreamUrl) return;
+
+    iframeLoadedRef.current = false;
+    setIsIframeLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      if (!iframeLoadedRef.current) {
+        console.warn(`Server ${selectedServerIndex + 1} timed out after 12s, triggering auto-failover`);
+        triggerAutoFailover(selectedServerIndex);
+      }
+    }, 12000);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeStreamUrl, isEmbedStream, selectedServerIndex, triggerAutoFailover]);
+
   useEffect(() => {
     if (!streams.length) return;
     streams.forEach((s) => {
@@ -824,7 +841,10 @@ export default function VideoPlayer({
             referrerPolicy="no-referrer"
             allow="accelerometer; autoplay *; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen *"
             allowFullScreen
-            onLoad={() => setIsIframeLoading(false)}
+            onLoad={() => {
+                iframeLoadedRef.current = true;
+                setIsIframeLoading(false);
+              }}
             onError={() => {
               console.warn('Iframe failed to load, triggering auto-failover');
               triggerAutoFailover(selectedServerIndex);

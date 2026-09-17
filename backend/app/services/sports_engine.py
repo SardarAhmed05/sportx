@@ -240,30 +240,80 @@ class UniversalSportsEngine:
                         for e in events:
                             comps = e.get("competitions", [])
                             if not comps:
+                                t_name = e.get("name") or l_info["name"]
+                                match_id = f"{s_key}-tourney-{e.get('id', len(league_matches))}"
+                                league_matches.append({
+                                    "id": match_id,
+                                    "sport": cfg["name"],
+                                    "sport_id": s_key,
+                                    "league": l_info["name"],
+                                    "league_id": l_info["id"],
+                                    "league_short": l_info.get("short_code", l_info["id"].upper()),
+                                    "round": t_name,
+                                    "raw_date": e.get("date", ""),
+                                    "kickoff_date": "Tournament Matchday",
+                                    "kickoff_time": "Center Court Live",
+                                    "short_date": "Live",
+                                    "formatted_date_time": "Center Court Live",
+                                    "home_team": {
+                                        "name": f"{t_name} - Center Court",
+                                        "short_name": "ATP" if "atp" in l_info["id"] else "WTA",
+                                        "logo": generate_svg_avatar(t_name),
+                                        "score": 0,
+                                        "form": "W-W-W"
+                                    },
+                                    "away_team": {
+                                        "name": "Live World Broadcast",
+                                        "short_name": "INT",
+                                        "logo": generate_svg_avatar("World Broadcast"),
+                                        "score": 0,
+                                        "form": "W-W-W"
+                                    },
+                                    "status": "LIVE",
+                                    "minute": "LIVE",
+                                    "match_time": "Center Court Live",
+                                    "clock_seconds": 0,
+                                    "period": 1,
+                                    "live_synced_at": now,
+                                    "stadium": e.get("venue", {}).get("fullName", f"{t_name} Arena"),
+                                    "possession": {"home": 50, "away": 50},
+                                    "shots_on_target": {"home": 0, "away": 0},
+                                    "total_shots": {"home": 0, "away": 0},
+                                    "corners": {"home": 0, "away": 0},
+                                    "yellow_cards": {"home": 0, "away": 0},
+                                    "events": [],
+                                    "streams": cfg.get("default_broadcasters", []),
+                                    "priority": 1,
+                                    "viewers_count": 350000,
+                                    "featured": True
+                                })
                                 continue
-                            comp = comps[0]
-                            competitors = comp.get("competitors", [])
-                            if len(competitors) < 2:
-                                continue
-                            
-                            home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
-                            away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
-                            
-                            status_obj = comp.get("status", {})
-                            status_type = status_obj.get("type", {})
-                            status_state = status_type.get("state", "pre")
-                            short_detail = status_type.get("shortDetail") or status_type.get("detail", "Scheduled")
-                            
-                            raw_date = e.get("date") or comp.get("date", "")
-                            
-                            home_name = home.get("team", {}).get("displayName", "Home Team")
-                            away_name = away.get("team", {}).get("displayName", "Away Team")
-                            
-                            home_logo = home.get("team", {}).get("logo") or generate_svg_avatar(home_name)
-                            away_logo = away.get("team", {}).get("logo") or generate_svg_avatar(away_name)
-                            
-                            home_score = int(home.get("score") or 0)
-                            away_score = int(away.get("score") or 0)
+
+                            for comp in comps:
+                                competitors = comp.get("competitors", [])
+                                if len(competitors) < 2:
+                                    continue
+                                
+                                home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
+                                away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
+                                
+                                status_obj = comp.get("status", {})
+                                status_type = status_obj.get("type", {})
+                                status_state = status_type.get("state", "pre")
+                                short_detail = status_type.get("shortDetail") or status_type.get("detail", "Scheduled")
+                                
+                                raw_date = comp.get("date") or e.get("date", "")
+                                
+                                h_ath = home.get("athlete", {})
+                                a_ath = away.get("athlete", {})
+                                home_name = home.get("team", {}).get("displayName") or h_ath.get("displayName") or h_ath.get("fullName") or "Player 1"
+                                away_name = away.get("team", {}).get("displayName") or a_ath.get("displayName") or a_ath.get("fullName") or "Player 2"
+                                
+                                home_logo = home.get("team", {}).get("logo") or h_ath.get("flag", {}).get("href") or generate_svg_avatar(home_name)
+                                away_logo = away.get("team", {}).get("logo") or a_ath.get("flag", {}).get("href") or generate_svg_avatar(away_name)
+                                
+                                home_score = int(home.get("score") or 0)
+                                away_score = int(away.get("score") or 0)
                             
                             if status_state == "in":
                                 match_status = "LIVE"

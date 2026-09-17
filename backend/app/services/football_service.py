@@ -379,9 +379,11 @@ class FootballEngine:
 
         matches = []
         today = datetime.date.today()
-        start = (today - datetime.timedelta(days=7)).strftime("%Y%m%d")
-        end = (today + datetime.timedelta(days=28)).strftime("%Y%m%d")
-        date_range_param = f"{start}-{end}"
+        cur_month = today.strftime("%Y%m")
+        months_to_fetch = [cur_month]
+        if today.day > 15:
+            next_m = (today.replace(day=28) + datetime.timedelta(days=5)).strftime("%Y%m")
+            months_to_fetch.append(next_m)
         
         async with httpx.AsyncClient(timeout=8.0) as client:
             # 1. Real-time Live Scoreboards Fetcher (Global soccer + UEFA Champions League)
@@ -389,8 +391,8 @@ class FootballEngine:
                 live_items = []
                 try:
                     r_all, r_ucl = await asyncio.gather(
-                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard", headers={"User-Agent": "Mozilla/5.0"}),
-                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard", headers={"User-Agent": "Mozilla/5.0"}),
+                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?limit=100", headers={"User-Agent": "Mozilla/5.0"}),
+                        client.get("https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard?limit=100", headers={"User-Agent": "Mozilla/5.0"}),
                         return_exceptions=True
                     )
                     seen_event_ids = set()
@@ -460,116 +462,122 @@ class FootballEngine:
             # 2. League Matches Fetcher
             async def fetch_league_matches(cfg):
                 league_matches = []
+                seen_event_ids = set()
                 try:
-                    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{cfg['code']}/scoreboard?dates={date_range_param}"
-                    resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        events = data.get("events", [])
-                        for e in events:
-                            comps = e.get("competitions", [])
-                            if not comps:
-                                continue
-                            comp = comps[0]
-                            competitors = comp.get("competitors", [])
-                            if len(competitors) < 2:
-                                continue
-                            
-                            home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
-                            away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
-                            
-                            status_obj = comp.get("status", {})
-                            status_type = status_obj.get("type", {})
-                            status_state = status_type.get("state", "pre")
-                            
-                            raw_date = e.get("date") or comp.get("date", "")
-                            date_info = format_match_date(raw_date)
-                            
-                            home_name = home.get("team", {}).get("displayName", "Home Team")
-                            away_name = away.get("team", {}).get("displayName", "Away Team")
-                            
-                            home_logo = home.get("team", {}).get("logo") or generate_svg_avatar(home_name)
-                            away_logo = away.get("team", {}).get("logo") or generate_svg_avatar(away_name)
-                            
-                            home_score = int(home.get("score") or 0)
-                            away_score = int(away.get("score") or 0)
-                            
-                            clock_sec = float(status_obj.get("clock", 0) or 0)
-                            period_num = int(status_obj.get("period", 1) or 1)
+                    for m_param in months_to_fetch:
+                        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{cfg['code']}/scoreboard?dates={m_param}"
+                        resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            events = data.get("events", [])
+                            for e in events:
+                                eid = e.get("id")
+                                if eid in seen_event_ids:
+                                    continue
+                                seen_event_ids.add(eid)
+                                comps = e.get("competitions", [])
+                                if not comps:
+                                    continue
+                                comp = comps[0]
+                                competitors = comp.get("competitors", [])
+                                if len(competitors) < 2:
+                                    continue
+                                
+                                home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
+                                away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
+                                
+                                status_obj = comp.get("status", {})
+                                status_type = status_obj.get("type", {})
+                                status_state = status_type.get("state", "pre")
+                                
+                                raw_date = e.get("date") or comp.get("date", "")
+                                date_info = format_match_date(raw_date)
+                                
+                                home_name = home.get("team", {}).get("displayName", "Home Team")
+                                away_name = away.get("team", {}).get("displayName", "Away Team")
+                                
+                                home_logo = home.get("team", {}).get("logo") or generate_svg_avatar(home_name)
+                                away_logo = away.get("team", {}).get("logo") or generate_svg_avatar(away_name)
+                                
+                                home_score = int(home.get("score") or 0)
+                                away_score = int(away.get("score") or 0)
+                                
+                                clock_sec = float(status_obj.get("clock", 0) or 0)
+                                period_num = int(status_obj.get("period", 1) or 1)
 
-                            if status_state == "in":
-                                match_status = "LIVE"
-                                display_clock = status_obj.get("displayClock") or status_type.get("detail") or "LIVE"
-                                clock_str = str(display_clock).strip()
-                                if ":" in clock_str:
-                                    minute = f"{clock_str.split(':')[0]}'"
-                                elif clock_str.isdigit():
-                                    minute = f"{clock_str}'"
-                                elif "'" in clock_str:
-                                    minute = clock_str
-                                elif clock_str.upper() in ["HT", "HALFTIME"]:
-                                    minute = "HT"
+                                if status_state == "in":
+                                    match_status = "LIVE"
+                                    display_clock = status_obj.get("displayClock") or status_type.get("detail") or "LIVE"
+                                    clock_str = str(display_clock).strip()
+                                    if ":" in clock_str:
+                                        minute = f"{clock_str.split(':')[0]}'"
+                                    elif clock_str.isdigit():
+                                        minute = f"{clock_str}'"
+                                    elif "'" in clock_str:
+                                        minute = clock_str
+                                    elif clock_str.upper() in ["HT", "HALFTIME"]:
+                                        minute = "HT"
+                                    else:
+                                        minute = f"{clock_str}'" if clock_str != "LIVE" else "LIVE"
+                                    match_time = f"{minute} Live"
+                                elif status_state == "post":
+                                    match_status = "FINISHED"
+                                    minute = "FT"
+                                    match_time = f"Full Time • {date_info['short_date']}"
                                 else:
-                                    minute = f"{clock_str}'" if clock_str != "LIVE" else "LIVE"
-                                match_time = f"{minute} Live"
-                            elif status_state == "post":
-                                match_status = "FINISHED"
-                                minute = "FT"
-                                match_time = f"Full Time • {date_info['short_date']}"
-                            else:
-                                match_status = "UPCOMING"
-                                minute = date_info["full_date_time"]
-                                match_time = f"Kickoff: {date_info['full_date_time']}"
-                            
-                            venue = comp.get("venue", {}).get("fullName", f"{home_name} Stadium")
-                            match_id = f"fb-espn-{e.get('id', cfg['id'] + '-' + str(len(league_matches)))}"
-                            
-                            broadcasters = get_broadcasters_for_football(cfg["id"], home_name, away_name, match_status)
-                            
-                            league_matches.append({
-                                "id": match_id,
-                                "espn_id": e.get("id"),
-                                "league": cfg["name"],
-                                "league_id": cfg["id"],
-                                "league_short": cfg.get("short_code", cfg["id"].upper()),
-                                "round": e.get("name", cfg["name"]),
-                                "raw_date": raw_date,
-                                "kickoff_date": date_info["date_formatted"],
-                                "kickoff_time": date_info["kickoff_time"],
-                                "short_date": date_info["short_date"],
-                                "formatted_date_time": date_info["full_date_time"],
-                                "home_team": {
-                                    "name": home_name,
-                                    "short_name": home.get("team", {}).get("abbreviation", home_name[:3].upper()),
-                                    "logo": home_logo,
-                                    "score": home_score,
-                                    "form": home.get("form", "W-D-W")
-                                },
-                                "away_team": {
-                                    "name": away_name,
-                                    "short_name": away.get("team", {}).get("abbreviation", away_name[:3].upper()),
-                                    "logo": away_logo,
-                                    "score": away_score,
-                                    "form": away.get("form", "D-W-L")
-                                },
-                                "status": match_status,
-                                "minute": minute,
-                                "match_time": match_time,
-                                "clock_seconds": clock_sec,
-                                "period": period_num,
-                                "live_synced_at": now,
-                                "stadium": venue,
-                                "possession": {"home": 52, "away": 48},
-                                "shots_on_target": {"home": max(home_score + 2, 2) if match_status != "UPCOMING" else 0, "away": max(away_score + 1, 1) if match_status != "UPCOMING" else 0},
-                                "total_shots": {"home": max(home_score * 3 + 5, 6) if match_status != "UPCOMING" else 0, "away": max(away_score * 3 + 4, 4) if match_status != "UPCOMING" else 0},
-                                "corners": {"home": 5 if match_status != "UPCOMING" else 0, "away": 3 if match_status != "UPCOMING" else 0},
-                                "yellow_cards": {"home": 1 if match_status != "UPCOMING" else 0, "away": 2 if match_status != "UPCOMING" else 0},
-                                "events": [],
-                                "streams": broadcasters,
-                                "priority": 1 if match_status == "LIVE" else (2 if match_status == "UPCOMING" else 3),
-                                "viewers_count": 550000 if match_status == "LIVE" else (320000 if match_status == "UPCOMING" else 150000),
-                                "featured": match_status == "LIVE"
-                            })
+                                    match_status = "UPCOMING"
+                                    minute = date_info["full_date_time"]
+                                    match_time = f"Kickoff: {date_info['full_date_time']}"
+                                
+                                venue = comp.get("venue", {}).get("fullName", f"{home_name} Stadium")
+                                match_id = f"fb-espn-{e.get('id', cfg['id'] + '-' + str(len(league_matches)))}"
+                                
+                                broadcasters = get_broadcasters_for_football(cfg["id"], home_name, away_name, match_status)
+                                
+                                league_matches.append({
+                                    "id": match_id,
+                                    "espn_id": e.get("id"),
+                                    "league": cfg["name"],
+                                    "league_id": cfg["id"],
+                                    "league_short": cfg.get("short_code", cfg["id"].upper()),
+                                    "round": e.get("name", cfg["name"]),
+                                    "raw_date": raw_date,
+                                    "kickoff_date": date_info["date_formatted"],
+                                    "kickoff_time": date_info["kickoff_time"],
+                                    "short_date": date_info["short_date"],
+                                    "formatted_date_time": date_info["full_date_time"],
+                                    "home_team": {
+                                        "name": home_name,
+                                        "short_name": home.get("team", {}).get("abbreviation", home_name[:3].upper()),
+                                        "logo": home_logo,
+                                        "score": home_score,
+                                        "form": home.get("form", "W-D-W")
+                                    },
+                                    "away_team": {
+                                        "name": away_name,
+                                        "short_name": away.get("team", {}).get("abbreviation", away_name[:3].upper()),
+                                        "logo": away_logo,
+                                        "score": away_score,
+                                        "form": away.get("form", "D-W-L")
+                                    },
+                                    "status": match_status,
+                                    "minute": minute,
+                                    "match_time": match_time,
+                                    "clock_seconds": clock_sec,
+                                    "period": period_num,
+                                    "live_synced_at": now,
+                                    "stadium": venue,
+                                    "possession": {"home": 52, "away": 48},
+                                    "shots_on_target": {"home": max(home_score + 2, 2) if match_status != "UPCOMING" else 0, "away": max(away_score + 1, 1) if match_status != "UPCOMING" else 0},
+                                    "total_shots": {"home": max(home_score * 3 + 5, 6) if match_status != "UPCOMING" else 0, "away": max(away_score * 3 + 4, 4) if match_status != "UPCOMING" else 0},
+                                    "corners": {"home": 5 if match_status != "UPCOMING" else 0, "away": 3 if match_status != "UPCOMING" else 0},
+                                    "yellow_cards": {"home": 1 if match_status != "UPCOMING" else 0, "away": 2 if match_status != "UPCOMING" else 0},
+                                    "events": [],
+                                    "streams": broadcasters,
+                                    "priority": 1 if match_status == "LIVE" else (2 if match_status == "UPCOMING" else 3),
+                                    "viewers_count": 550000 if match_status == "LIVE" else (320000 if match_status == "UPCOMING" else 150000),
+                                    "featured": match_status == "LIVE"
+                                })
                 except Exception:
                     pass
                 return league_matches

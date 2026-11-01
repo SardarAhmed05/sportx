@@ -695,7 +695,10 @@ class FootballEngine:
                                 m["streams"] = live_srvs
                         except Exception:
                             pass
-                    await asyncio.gather(*[enrich_live(m) for m in live], return_exceptions=True)
+                    await asyncio.wait_for(
+                        asyncio.gather(*[enrich_live(m) for m in live], return_exceptions=True),
+                        timeout=2.0
+                    )
                 except Exception as ex:
                     logger.warning(f"Error enriching live streams: {ex}")
 

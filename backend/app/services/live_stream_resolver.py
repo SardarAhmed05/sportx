@@ -82,14 +82,15 @@ class LiveStreamResolver:
 
     async def _ensure_cache(self):
         now = time.time()
-        if self._matches_cache and (now - self._last_fetch) < self._cache_ttl:
+        if (now - self._last_fetch) < self._cache_ttl:
             return
 
         async with self._lock:
             # Double check inside lock
-            if self._matches_cache and (time.time() - self._last_fetch) < self._cache_ttl:
+            if (time.time() - self._last_fetch) < self._cache_ttl:
                 return
             
+            self._last_fetch = time.time()
             endpoints = [
                 "https://streamed.pk/api/matches/all",
                 "https://streamed.su/api/matches/all",
@@ -97,17 +98,16 @@ class LiveStreamResolver:
             ]
             for ep in endpoints:
                 try:
-                    async with httpx.AsyncClient(timeout=4.0, verify=False, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                    async with httpx.AsyncClient(timeout=1.5, verify=False, headers={"User-Agent": "Mozilla/5.0"}) as client:
                         resp = await client.get(ep)
                         if resp.status_code == 200:
                             data = resp.json()
                             if isinstance(data, list) and len(data) > 0:
                                 self._matches_cache = data
-                                self._last_fetch = time.time()
                                 logger.info(f"Loaded {len(data)} live matches from {ep}")
                                 return
                 except Exception as e:
-                    logger.warning(f"Failed to fetch live streams from {ep}: {e}")
+                    logger.debug(f"Stream endpoint {ep} unavailable: {e}")
 
     def _normalize(self, text: str) -> str:
         t = re.sub(r'[^a-zA-Z0-9\s]', ' ', (text or '').lower())
@@ -216,7 +216,7 @@ class LiveStreamResolver:
                 "quality": feed.get("quality", "1080p HD"),
                 "language": feed.get("language", "English"),
                 "url": feed["url"],
-                "is_embed": True,
+                "is_embed": feed.get("is_embed", False),
                 "is_primary": len(servers) == 0,
                 "is_replay": False,
                 "coverage": f"Official Broadcast Feed: {home_name} vs {away_name}"

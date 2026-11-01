@@ -218,7 +218,7 @@ export default function VideoPlayer({
       network: matchData?.country || matchData?.competition || 'Global Feed',
       quality: matchData?.quality || '1080p HD',
       url: matchData?.stream_url || matchData?.url || 'https://embed.st/embed/admin/ppv-barcelona-vs-feyenoord-rotterdam/1',
-      is_embed: matchData?.is_embed ?? !(matchData?.stream_url || matchData?.url || '').includes('.m3u8'),
+      is_embed: !(matchData?.stream_url || matchData?.url || '').includes('.m3u8') && Boolean(matchData?.is_embed),
       language: matchData?.language || 'English',
       coverage: 'Official Channel Stream',
       is_replay: false
@@ -247,13 +247,15 @@ export default function VideoPlayer({
   );
   const isLive = isMatch && matchData?.status === 'LIVE';
 
-  const isEmbedStream = currentStream?.is_embed || 
+  const isEmbedStream = !(currentStream?.url || '').includes('.m3u8') && (
+    Boolean(currentStream?.is_embed) || 
     (currentStream?.url && (
       currentStream.url.includes('/embed') || 
       currentStream.url.includes('youtube') || 
       currentStream.url.includes('youtu.be') || 
-      !currentStream.url.includes('.m3u8')
-    ));
+      (!currentStream.url.includes('.m3u8') && !currentStream.url.includes('.mp4'))
+    ))
+  );
 
   const activeStreamUrl = currentStream 
     ? (useProxy && !isEmbedStream ? getProxiedStreamUrl(currentStream.url) : currentStream.url)
